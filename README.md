@@ -13,3 +13,8 @@ as financial data through Yahoo Finance, to transform and load into a SQL databa
 * Transform data into tables
 * Connect to database
 * Load into database
+
+## Orchestration
+* Set up venv to create and activate from script
+* Using .sh or .ps1?
+* Work towards Airflow
