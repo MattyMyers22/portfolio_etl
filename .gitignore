@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 
 # client Secrets
-client_secret.json
+credentials.json
 
 # Config file
 config.py
