@@ -7,6 +7,7 @@ A Google Account and Project must be created. [Here](https://developers.google.c
 Google's documentation for a Python quickstart with their Google Sheets API.
 
 - Pick Up at Configure the Sample section of the quickstart
+- Need to set up browser access for WSL2
 - For some reason it says I need module named google, may need to try gspread
 
 ## Workflow
