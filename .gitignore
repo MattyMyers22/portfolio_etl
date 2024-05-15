@@ -5,6 +5,7 @@ __pycache__/
 
 # client Secrets
 credentials.json
+token.json
 
 # Config file
 config.py
