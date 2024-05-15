@@ -13,7 +13,7 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 # The ID and range of a sample spreadsheet.
 SAMPLE_SPREADSHEET_ID = spreadsheet_id
-SAMPLE_RANGE_NAME = "Transactions!A:I"
+SAMPLE_RANGE_NAME = "Transactions!A:H"
 
 
 def main():
