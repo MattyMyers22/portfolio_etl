@@ -7,6 +7,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from config import spreadsheet_id
+import pandas as pd
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
@@ -50,12 +51,13 @@ def main():
         .execute()
     )
     values = result.get("values", [])
+    df = pd.DataFrame(data=values[1:], columns=values[0])
 
     if not values:
       print("No data found.")
       return
 
-    print(values)
+    return df
   except HttpError as err:
     print(err)
 
