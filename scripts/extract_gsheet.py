@@ -57,7 +57,9 @@ def main():
       print("No data found.")
       return
 
-    return df
+    # Save portfolio data as excel
+    df.to_excel('data/raw_portfolio.xlsx', index=False)
+
   except HttpError as err:
     print(err)
 
