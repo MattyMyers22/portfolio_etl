@@ -1,5 +1,5 @@
 # Contents of data directory
-data/
+raw_portfolio.xlsx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
