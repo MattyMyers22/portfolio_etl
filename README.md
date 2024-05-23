@@ -25,3 +25,16 @@ Google's documentation for a Python quickstart with their Google Sheets API.
 ## Orchestration
 * Set up venv to create and activate from bash script
 * Work towards Airflow
+
+### Order of Execution
+1. extract_gsheet.py
+2. extract_yfinance.py
+    * first executed for S&P from start
+    * then executed for list of current holdings most recent price
+    * concat these dataframes and return raw excel
+3. transorm.py
+    * save cleaned versions as excels
+4. load.py
+    * connects to database
+    * drops tables
+    * loads cleaned excels into tables
