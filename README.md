@@ -2,7 +2,7 @@
 This project aims to provide a structure for extracting investment portfolio data stored in Google Sheets, as well 
 as financial data through Yahoo Finance, to transform and load into a SQL database.
 
-# References
+## References
 A Google Account and Project must be created. [Here](https://developers.google.com/sheets/api/quickstart/python) is a link to 
 Google's documentation for a Python quickstart with their Google Sheets API.
 
@@ -34,3 +34,11 @@ Google's documentation for a Python quickstart with their Google Sheets API.
     * connects to database
     * drops tables
     * loads cleaned excels into tables
+
+## Data Sources
+There are two data sources that are required for extraction of the information needed.
+* Google Sheet (Extracted through API)
+  * History of trades and holdings
+* Yahoo Finance (Extracted through API)
+  * S&P 500 historical prices
+  * Recent prices for current portfolio holdings
