@@ -14,12 +14,12 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 # The ID and range of a sample spreadsheet.
 SAMPLE_SPREADSHEET_ID = spreadsheet_id
-SAMPLE_RANGE_NAME = "Transactions!A:H"
+SAMPLE_RANGE_NAMES = ['Transactions!A:H', 'Cash!A:C']
 
 
-def main():
+def extract(range_name):
   """Shows basic usage of the Sheets API.
-  Prints values from a sample spreadsheet.
+  Exports values from spreadsheet to excel.
   """
   creds = None
   # The file token.json stores the user's access and refresh tokens, and is
@@ -47,7 +47,7 @@ def main():
     sheet = service.spreadsheets()
     result = (
         sheet.values()
-        .get(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=SAMPLE_RANGE_NAME)
+        .get(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=range)
         .execute()
     )
     values = result.get("values", [])
@@ -57,12 +57,19 @@ def main():
       print("No data found.")
       return
 
-    # Save portfolio data as excel
-    df.to_excel('data/raw_portfolio.xlsx', index=False)
+    # Check if extracted transaction data
+    if range_name.startswith('Transactions'):
+      # Save portfolio data as excel
+      df.to_excel('data/raw_portfolio.xlsx', index=False)
+
+    # Check if extracted transaction data
+    if range_name.startswith('Cash'):
+      # Save portfolio data as excel
+      df.to_excel('data/raw_cash.xlsx', index=False)
 
   except HttpError as err:
     print(err)
 
-
-if __name__ == "__main__":
-  main()
+# Execute script for each sheet range
+for range in SAMPLE_RANGE_NAMES:
+  extract(range)
