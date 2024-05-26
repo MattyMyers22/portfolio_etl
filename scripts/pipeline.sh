@@ -9,8 +9,11 @@ source etl_env/bin/activate
 
 cd scripts
 
-# Run python script
-python3 extract.py
+# Run python script to extract google sheet data
+python3 extract_gsheet.py
+
+# Run python script to extract yahoo finance data
+python3 extract_yfinance.py
 
 cd ..
 
