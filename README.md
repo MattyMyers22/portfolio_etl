@@ -38,7 +38,7 @@ Google's documentation for a Python quickstart with their Google Sheets API.
 ## Data Sources
 There are two data sources that are required for extraction of the information needed.
 * Google Sheet (Extracted through API)
-  * History of trades and holdings
+  * History of trades, holdings, and cash levels
 * Yahoo Finance (Extracted through API)
   * S&P 500 historical prices
-  * Recent prices for current portfolio holdings
+  * Historical prices for current portfolio holdings from purchase date
