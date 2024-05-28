@@ -9,7 +9,6 @@ import pandas as pd
 # Read in data sources
 portfolio_df = pd.read_excel('data/raw_portfolio.xlsx')
 cash_df = pd.read_excel('data/raw_cash.xlsx')
-prices_df = pd.read_excel('data/historical_prices.xlsx')
 
 # Set data types for cash records
 cash_df['date'] = pd.to_datetime(cash_df['date'])
@@ -18,5 +17,8 @@ cash_df['date'] = pd.to_datetime(cash_df['date'])
 cash_df.to_excel('data/clean_cash.xlsx', index=False)
 
 # Set data types for portfolio transactions
+portfolio_df['purchase_date'] = pd.to_datetime(portfolio_df['purchase_date'], format='mixed', dayfirst=False)
+portfolio_df['sell_date'] = pd.to_datetime(portfolio_df['sell_date'], format='mixed', dayfirst=False)
 
 # Save clean portfolio transactions
+portfolio_df.to_excel('data/clean_portfolio.xlsx', index=False)
