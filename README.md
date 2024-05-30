@@ -2,6 +2,13 @@
 This project aims to provide a structure for extracting investment portfolio data stored in Google Sheets, as well 
 as financial data through Yahoo Finance, to transform and load into a SQL database.
 
+## Initial Setup
+* MySQL
+* Python >= Verion 3
+* Google Account
+* Google Sheet with tab for portfolio transaction data and one for historical cash values
+(need example tables)
+
 ## Data Sources
 There are two data sources that are required for extraction of the information needed.
 * Google Sheet (Extracted through API)
@@ -16,6 +23,7 @@ Google's documentation for a Python quickstart with their Google Sheets API.
 
 ## Workflow
 
+* Create database
 * Create venv
 * Activate venv
 * Install dependencies from requirements.txt
@@ -25,6 +33,21 @@ Google's documentation for a Python quickstart with their Google Sheets API.
 * Transform data into tables
 * Connect to database
 * Load into database
+
+### Setting Up The Database
+Once MySQL Server is setup, a database needs to be created. This can be done from the terminal by 
+executing the following steps.
+
+**Access MySQL from terminal (replace 'root' with your username)**
+``` bash
+sudo mysql -u root -p
+```
+Enter your sudo Linux password, followed by your database user (root) password.
+
+**Create database for fund holdings**
+``` sql
+CREATE DATABASE fund_holdings;
+```
 
 ## Orchestration
 * Set up venv to create and activate from bash script
