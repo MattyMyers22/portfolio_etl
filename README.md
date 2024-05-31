@@ -46,7 +46,7 @@ Enter your sudo Linux password, followed by your database user (root) password.
 
 **Create database for fund holdings**
 ``` sql
-CREATE DATABASE fund_holdings;
+CREATE DATABASE portfolio_dwh;
 ```
 
 ## Orchestration
