@@ -5,3 +5,5 @@ google-auth
 pandas
 openpyxl
 yfinance
+sqlalchemy
+pymysql
