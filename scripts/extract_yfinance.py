@@ -36,7 +36,7 @@ def extract_yfinance(ticker='^GSPC', start_date='2019-09-16', end_date=None):
     return data
 
 # Read in raw_portfolio.xlsx
-raw_portfolio = pd.read_excel('data/raw_portfolio.xlsx')
+raw_portfolio = pd.read_excel('./data/raw_portfolio.xlsx')
 
 # Get DataFrame of unique symbol and min purchase_date
 tickers = raw_portfolio.groupby('symbol')['purchase_date'].min().reset_index()
