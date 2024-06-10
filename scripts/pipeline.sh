@@ -6,22 +6,19 @@
 source etl_env/bin/activate
 
 # Install dependencies from requirements.txt
-
-cd scripts
+pip install -r ./scripts/requirements.txt
 
 # Run python script to extract google sheet data
-python3 extract_gsheet.py
+python3 ./scripts/extract_gsheet.py
 
 # Run python script to extract yahoo finance data
-python3 extract_yfinance.py
+python3 ./scripts/extract_yfinance.py
 
 # Run python script to clean and transform data
-python3 transform.py
+python3 ./scripts/transform.py
 
 # Run python script to load data into database
-python3 load.py
-
-cd ..
+python3 ./scripts/load.py
 
 # Deactivate virtual environment
 deactivate
