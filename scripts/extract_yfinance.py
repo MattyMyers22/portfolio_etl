@@ -58,7 +58,9 @@ for ticker in tickers['symbol']:
 # Append S&P 500 data
 all_dfs.append(extract_yfinance())
 
-# Union dataframes
+# Filter empty dataframes
+historical_prices = [df for df in all_dfs if not df.empty]
+# Union all dataframes
 historical_prices = pd.concat(all_dfs, axis=0)
 
 # Save as excel
