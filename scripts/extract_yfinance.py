@@ -62,4 +62,4 @@ all_dfs.append(extract_yfinance())
 historical_prices = pd.concat(all_dfs, axis=0)
 
 # Save as excel
-historical_prices.to_excel('data/historical_prices.xlsx')
+historical_prices.to_excel('data/raw_prices.xlsx')
