@@ -19,3 +19,24 @@ sellings AS (
 SELECT * from purchases;
 
 SELECT * FROM portfolio;
+
+CREATE TABLE IF NOT EXISTS prices (
+	prices_id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATETIME,
+    open NUMERIC(12,4),
+    high NUMERIC(12,4),
+    low NUMERIC(12,4),
+    close NUMERIC(12,4),
+    adj_close NUMERIC(12,4),
+    volume BIGINT,
+    symbol VARCHAR(25)
+);
+
+SELECT * FROM portfolio;
+
+SHOW TABLES;
+
+TRUNCATE portfolio;
+
+SELECT * FROM portfolio
+WHERE id IS NULL;
