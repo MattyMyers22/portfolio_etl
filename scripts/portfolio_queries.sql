@@ -4,39 +4,27 @@
 USE portfolio_dwh;
 
 -- Get current holdings
+-- Purchase history
 WITH purchases AS (	
-    SELECT symbol, purchase_date, SUM(shares) AS shares_purchased
+    SELECT symbol, purchase_date, purchase_price, SUM(shares) AS shares_purchased
 	FROM portfolio
 	WHERE account = 'Roth IRA' AND transaction_type IN ('buy', 'reinvestment')
-	GROUP BY symbol, purchase_date),
+	GROUP BY symbol, purchase_date, purchase_price),
+-- Selling history
 sellings AS (
-	SELECT symbol, purchase_date, SUM(shares) AS sold_shares
+	SELECT symbol, purchase_date, purchase_price, SUM(shares) AS shares_sold, 
+		sell_date, sell_price
 	FROM portfolio
     WHERE account = 'Roth IRA' AND transaction_type = 'sell'
-    GROUP BY symbol, purchase_date
+    GROUP BY symbol, purchase_date, purchase_price, sell_date, sell_price
 )
 
-SELECT * from purchases;
-
-SELECT * FROM portfolio;
-
-CREATE TABLE IF NOT EXISTS prices (
-	prices_id INT AUTO_INCREMENT PRIMARY KEY,
-    date DATETIME,
-    open NUMERIC(12,4),
-    high NUMERIC(12,4),
-    low NUMERIC(12,4),
-    close NUMERIC(12,4),
-    adj_close NUMERIC(12,4),
-    volume BIGINT,
-    symbol VARCHAR(25)
-);
-
-SELECT * FROM portfolio;
-
-SHOW TABLES;
-
-TRUNCATE portfolio;
-
-SELECT * FROM portfolio
-WHERE id IS NULL;
+SELECT p.symbol, p.purchase_date, p.purchase_price, shares_purchased, 
+	shares_sold, sell_date, sell_price, 
+    (shares_purchased - COALESCE(shares_sold, 0)) AS current_shares,
+    purchase_price * shares_purchased AS cost_basis,
+    shares_sold * sell_price AS realized_return,
+    (shares_sold * sell_price) - (purchase_price * shares_purchased) AS realized_pl
+FROM purchases AS p
+LEFT JOIN sellings AS s
+	USING(symbol, purchase_date, purchase_price);
