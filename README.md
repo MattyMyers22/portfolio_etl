@@ -65,3 +65,6 @@ CREATE DATABASE portfolio_dwh;
     * connects to database
     * drops tables
     * loads cleaned excels into tables
+
+## Database Entity Relationships
+![image](ER_Portfolio_DWH.png)
