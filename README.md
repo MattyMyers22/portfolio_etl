@@ -8,15 +8,12 @@ as financial data through Yahoo Finance, to transform and load into a SQL databa
 * Google Account
 * Google Sheet with two tabs containing portfolio data
   * One tab containing portfolio transaction history
-  | transaction_type | account | symbol | purchase_date | shares | purchase_price | sell_date | sell_price |
-  |---|---|---|---|---|---|---|---|
-  | buy              | 401k    | AAPL   |  12/30/2023   | 5      | 160.50         |           |            |
-  | sell             | 401k    | AAPL   |  12/30/2023   | 2      | 160.50         | 03/20/2024| 180.00     |
-  | reinvestment     | 401k    | AAPL   |  1/10/2024    | 0.004  | 170.25         |           |            |
+  ![image](images/portfolio_data_example.JPG)
   
   Currently, there are three options for transaction types (buy, sell, reinvestment), where reinvestment is an 
   automatic reinvestment of dividends into the holding it is paid out from. Each sell transaction is note with 
   the original purchase price and date.
+  
   * One tab for historical cash values in investment accounts
 (need example tables)
 
