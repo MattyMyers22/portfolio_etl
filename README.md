@@ -7,14 +7,14 @@ as financial data through Yahoo Finance, to transform and load into a SQL databa
 * Python >= Verion 3
 * Google Account
 * Google Sheet with two tabs containing portfolio data
-  * One tab containing portfolio transaction history
+  * One tab named 'Transactions' containing portfolio transaction history
   ![image](images/portfolio_data_example.JPG)
   
   Currently, there are three options for transaction types (buy, sell, reinvestment), where reinvestment is an 
   automatic reinvestment of dividends into the holding it is paid out from. Each sell transaction is note with 
   the original purchase price and date.
-  
-  * One tab for historical cash values in investment accounts
+
+  * One tab named 'Cash' for historical cash values in investment accounts
 (need example tables)
 
 ## Data Sources
