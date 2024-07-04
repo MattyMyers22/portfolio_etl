@@ -18,12 +18,33 @@ current AS (
 		shares_purchased - COALESCE(shares_sold, 0) AS current_shares
 	FROM purchases AS p
 	LEFT JOIN sellings AS s
-		USING(symbol, purchase_date, purchase_price))
-        
-SELECT symbol, SUM(current_shares)
-FROM current
-GROUP BY symbol
-HAVING SUM(current_shares) <> 0;
+		USING(symbol, purchase_date, purchase_price)),
+holdings AS (
+	SELECT symbol, SUM(current_shares) AS shares
+	FROM current
+	GROUP BY symbol
+	HAVING SUM(current_shares) <> 0),
+basis AS (
+	SELECT h.symbol, shares, SUM(unrealized_cost_basis) AS unrealized_cost_basis, 
+		SUM(realized_cost_basis) AS realized_cost_basis, 
+		ROUND((SUM(unrealized_cost_basis) / shares), 2) AS avg_unr_cost_basis
+	FROM holdings AS h
+	INNER JOIN
+		(SELECT symbol, (purchase_price * current_shares) AS unrealized_cost_basis,
+			(purchase_price * shares_sold) AS realized_cost_basis
+		FROM current) AS sub
+	USING(symbol)
+	GROUP BY h.symbol)
+    
+SELECT b.symbol, shares, unrealized_cost_basis, realized_cost_basis,
+	avg_unr_cost_basis, adj_close AS price, (shares * adj_close) AS value,
+    (shares * adj_close) - unrealized_cost_basis AS unrealized_pl
+FROM basis AS b
+INNER JOIN
+	(SELECT *
+	FROM prices
+	WHERE date = (SELECT MAX(date) FROM prices)) AS p
+USING(symbol);
 
 /*
 -- Get full returns history
