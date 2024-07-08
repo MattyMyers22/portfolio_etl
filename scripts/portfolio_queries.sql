@@ -50,7 +50,7 @@ INNER JOIN
 	(SELECT *
 	FROM prices
 	WHERE date = (SELECT MAX(date) FROM prices)) AS p
-USING(symbol);
+	USING(symbol);
 
 /*
 -- Get full returns history
@@ -127,4 +127,5 @@ LEFT JOIN lates_prices AS l
 	USING(symbol);
 */
 
-SELECT * FROM prices;
+SELECT * FROM prices
+WHERE symbol = 'VFIAX';
