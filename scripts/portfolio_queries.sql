@@ -36,9 +36,9 @@ basis AS (
 	USING(symbol)
 	GROUP BY h.symbol)
     
-SELECT b.symbol, shares, unrealized_cost_basis, realized_cost_basis,
-	avg_unr_cost_basis, adj_close AS price, (shares * adj_close) AS value,
-    (shares * adj_close) - unrealized_cost_basis AS unrealized_pl
+SELECT b.symbol, shares, adj_close AS latest_price, (shares * adj_close) AS value, 
+	avg_unr_cost_basis, unrealized_cost_basis,
+    (shares * adj_close) - unrealized_cost_basis AS unrealized_pl, realized_cost_basis
 FROM basis AS b
 INNER JOIN
 	(SELECT *
