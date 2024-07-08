@@ -41,7 +41,7 @@ basis AS (
 	USING(symbol)
 	GROUP BY h.symbol)
     
-SELECT b.symbol, shares, adj_close AS latest_price, ROUND((shares * adj_close), 2) AS value, 
+SELECT b.symbol, shares, ROUND(adj_close, 2) AS latest_price, ROUND((shares * adj_close), 2) AS value, 
 	avg_unr_cost_basis, unrealized_cost_basis,
     ROUND((shares * adj_close) - unrealized_cost_basis, 2) AS unrealized_pl, realized_cost_basis,
     total_cost_basis
