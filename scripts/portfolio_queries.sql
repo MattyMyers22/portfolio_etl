@@ -39,18 +39,25 @@ basis AS (
 			(purchase_price * shares_sold) AS realized_cost_basis
 		FROM current) AS sub
 	USING(symbol)
-	GROUP BY h.symbol)
+	GROUP BY h.symbol),
+value AS (
+	SELECT b.symbol, shares, ROUND(adj_close, 2) AS latest_price, ROUND((shares * adj_close), 2) AS value, 
+		avg_unr_cost_basis, unrealized_cost_basis,
+		ROUND((shares * adj_close) - unrealized_cost_basis, 2) AS unrealized_pl, realized_cost_basis,
+		total_cost_basis
+	FROM basis AS b
+	INNER JOIN
+		(SELECT *
+		FROM prices
+		WHERE date = (SELECT MAX(date) FROM prices)) AS p
+		USING(symbol)
+)
     
-SELECT b.symbol, shares, ROUND(adj_close, 2) AS latest_price, ROUND((shares * adj_close), 2) AS value, 
-	avg_unr_cost_basis, unrealized_cost_basis,
-    ROUND((shares * adj_close) - unrealized_cost_basis, 2) AS unrealized_pl, realized_cost_basis,
-    total_cost_basis
-FROM basis AS b
-INNER JOIN
-	(SELECT *
-	FROM prices
-	WHERE date = (SELECT MAX(date) FROM prices)) AS p
-	USING(symbol);
+SELECT p.symbol, purchase_date, p.shares AS sold_shares, purchase_price, sell_date, sell_price
+FROM portfolio AS p
+INNER JOIN holdings AS h
+	USING(symbol)
+WHERE account = 'Roth IRA' AND transaction_type = 'sell';
 
 /*
 -- Get full returns history
