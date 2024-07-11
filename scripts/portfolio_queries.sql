@@ -53,10 +53,8 @@ value AS (
 		USING(symbol)
 )
     
-SELECT p.symbol, purchase_date, p.shares AS sold_shares, purchase_price, sell_date, sell_price
-FROM portfolio AS p
-INNER JOIN holdings AS h
-	USING(symbol)
+SELECT symbol, purchase_date, shares AS sold_shares, purchase_price, sell_date, sell_price
+FROM portfolio
 WHERE account = 'Roth IRA' AND transaction_type = 'sell';
 
 /*
