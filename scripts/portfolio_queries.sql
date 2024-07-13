@@ -1,6 +1,9 @@
 -- Connect to portfolio_dwh
 USE portfolio_dwh;
 
+-- Drop current holdings view if exists
+DROP VIEW IF EXISTS current_holdings;
+
 -- Create view for current holdings
 CREATE VIEW current_holdings AS
 -- Purchase history
@@ -44,7 +47,7 @@ basis AS (
 -- Get current value of current holdings
 value AS (
 	SELECT b.symbol, shares, ROUND(adj_close, 2) AS latest_price, ROUND((shares * adj_close), 2) AS value, 
-		avg_unr_cost_basis, unrealized_cost_basis,
+		avg_unr_cost_basis, unrealized_cost_basis, ROUND((shares * adj_close), 2) AS unr_return,
 		ROUND((shares * adj_close) - unrealized_cost_basis, 2) AS unrealized_pl, realized_cost_basis,
 		total_cost_basis
 	FROM basis AS b
