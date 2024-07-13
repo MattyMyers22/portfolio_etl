@@ -51,11 +51,22 @@ value AS (
 		FROM prices
 		WHERE date = (SELECT MAX(date) FROM prices)) AS p
 		USING(symbol)
+),
+realized_returns AS (
+	SELECT symbol, purchase_date, shares AS shares_sold, purchase_price, sell_date, sell_price,
+		ROUND((shares * sell_price), 2) AS realized_return
+	FROM portfolio
+	WHERE account = 'Roth IRA' AND transaction_type = 'sell'
 )
-    
-SELECT symbol, purchase_date, shares AS sold_shares, purchase_price, sell_date, sell_price
-FROM portfolio
-WHERE account = 'Roth IRA' AND transaction_type = 'sell';
+
+SELECT *
+FROM value AS v
+LEFT JOIN (    
+	SELECT symbol, SUM(realized_return) AS real_returns
+	FROM realized_returns
+	GROUP BY symbol) AS r
+	USING(symbol)
+ORDER BY value DESC;
 
 /*
 -- Get full returns history
