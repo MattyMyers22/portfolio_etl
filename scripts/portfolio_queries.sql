@@ -2,6 +2,7 @@
 USE portfolio_dwh;
 
 -- Create view for current holdings
+CREATE VIEW current_holdings AS
 -- Purchase history
 WITH purchases AS (	
     SELECT symbol, purchase_date, purchase_price, SUM(shares) AS shares_purchased
@@ -40,6 +41,7 @@ basis AS (
 		FROM current) AS sub
 	USING(symbol)
 	GROUP BY h.symbol),
+-- Get current value of current holdings
 value AS (
 	SELECT b.symbol, shares, ROUND(adj_close, 2) AS latest_price, ROUND((shares * adj_close), 2) AS value, 
 		avg_unr_cost_basis, unrealized_cost_basis,
@@ -52,6 +54,7 @@ value AS (
 		WHERE date = (SELECT MAX(date) FROM prices)) AS p
 		USING(symbol)
 ),
+-- Calculate all realized returns
 realized_returns AS (
 	SELECT symbol, purchase_date, shares AS shares_sold, purchase_price, sell_date, sell_price,
 		ROUND((shares * sell_price), 2) AS realized_return
@@ -59,7 +62,9 @@ realized_returns AS (
 	WHERE account = 'Roth IRA' AND transaction_type = 'sell'
 )
 
-SELECT *
+SELECT *, (real_returns - realized_cost_basis) AS real_pl,
+	(SELECT SUM(value)
+     FROM value) AS portfolio_value
 FROM value AS v
 LEFT JOIN (    
 	SELECT symbol, SUM(realized_return) AS real_returns
@@ -67,6 +72,11 @@ LEFT JOIN (
 	GROUP BY symbol) AS r
 	USING(symbol)
 ORDER BY value DESC;
+
+SELECT *
+FROM current_holdings;
+
+SELECT * FROM cash;
 
 /*
 -- Get full returns history
