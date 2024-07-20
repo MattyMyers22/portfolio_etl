@@ -7,7 +7,7 @@ import yfinance as yf
 import pandas as pd
 
 # Function to extract S&P data of interest
-def extract_yfinance(ticker='^GSPC', start_date='2019-09-16', end_date=None):
+def extract_yfinance(ticker='^GSPC', start_date='2019-01-30', end_date=None):
     """
     Extracts historical prices of the of stocks/funds using the yfinance library.
 
