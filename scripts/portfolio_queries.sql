@@ -94,17 +94,27 @@ sellings AS (
     WHERE account = 'Roth IRA' AND transaction_type = 'sell'
     GROUP BY symbol, purchase_date, purchase_price),
 -- Find current share counts
-current AS (
-	SELECT p.symbol, p.purchase_date, p.purchase_price, shares_purchased, shares_sold,
-		shares_purchased - COALESCE(shares_sold, 0) AS current_shares
+share_counts AS (
+	SELECT p.symbol, p.purchase_date, ROUND(p.purchase_price, 2) AS purchase_price, 
+		shares_purchased, shares_sold, shares_purchased - COALESCE(shares_sold, 0) AS current_shares
+        /*,
+        ROUND((shares_purchased - COALESCE(shares_sold, 0)) * p.purchase_price, 2) AS unr_cost_basis,
+        ROUND(DATEDIFF(CURDATE(), p.purchase_date) / 365.2425, 2) AS years_held,
+        sp.adj_close AS sp500_unr_cost_basis*/
 	FROM purchases AS p
 	LEFT JOIN sellings AS s
-		USING(symbol, purchase_date, purchase_price)),
+		USING(symbol, purchase_date, purchase_price)
+	/*LEFT JOIN (
+		SELECT date, adj_close
+        FROM prices
+        WHERE symbol = '^GSPC'
+    ) AS sp
+		ON p.purchase_date = sp.date*/),
 -- Current holdings with share counts
 holdings AS (
 	SELECT symbol, SUM(current_shares) AS shares
 	-- Get current chare count for each purchase history
-    FROM current
+    FROM share_counts
 	GROUP BY symbol
     -- Filter for symbols with current_shares > 0
 	HAVING SUM(current_shares) <> 0),
@@ -118,7 +128,7 @@ basis AS (
 	INNER JOIN
 		(SELECT symbol, (purchase_price * current_shares) AS unrealized_cost_basis,
 			(purchase_price * shares_sold) AS realized_cost_basis
-		FROM current) AS sub
+		FROM share_counts) AS sub
 	USING(symbol)
 	GROUP BY h.symbol),
 -- Get current value of current holdings
@@ -142,7 +152,7 @@ realized_returns AS (
 	WHERE account = 'Roth IRA' AND transaction_type = 'sell'
 ),
 -- portfolio values
-port_value AS (
+final AS (
 	SELECT *, (real_returns - realized_cost_basis) AS real_pl,
 		(SELECT SUM(value)
 		 FROM value) AS portfolio_value
@@ -156,6 +166,8 @@ port_value AS (
 )
 
 SELECT *
-FROM value;
--- perhaps instead of adding columns on to basis for value, just get all the new columns and join later
--- then can have a returns table
+FROM basis;
+-- Figure out if basis should go before holdings to figure out the unrealized
+-- basis, returns, years held, vs SP, etc. for each purchase history
+-- Would potentially do the same for realized values
+-- Then join holdings CTE to the others in the end
