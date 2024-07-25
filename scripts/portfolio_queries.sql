@@ -87,29 +87,44 @@ WITH purchases AS (
 	FROM portfolio
 	WHERE account = 'Roth IRA' AND transaction_type IN ('buy', 'reinvestment')
 	GROUP BY symbol, purchase_date, purchase_price),
--- Selling history
+-- Selling history with shares sold for each purchase
 sellings AS (
 	SELECT symbol, purchase_date, purchase_price, SUM(shares) AS shares_sold
 	FROM portfolio
     WHERE account = 'Roth IRA' AND transaction_type = 'sell'
     GROUP BY symbol, purchase_date, purchase_price),
--- Find current share counts
+-- Find current share counts and basis for each purchase
 share_counts AS (
 	SELECT p.symbol, p.purchase_date, ROUND(p.purchase_price, 2) AS purchase_price, 
-		shares_purchased, shares_sold, shares_purchased - COALESCE(shares_sold, 0) AS current_shares
-        /*,
+		shares_purchased, shares_sold, 
+        -- Current shares held
+        shares_purchased - COALESCE(shares_sold, 0) AS current_shares,
+        -- Unrealized cost basis
         ROUND((shares_purchased - COALESCE(shares_sold, 0)) * p.purchase_price, 2) AS unr_cost_basis,
-        ROUND(DATEDIFF(CURDATE(), p.purchase_date) / 365.2425, 2) AS years_held,
-        sp.adj_close AS sp500_unr_cost_basis*/
+        -- Realized cost basis
+        ROUND(COALESCE(shares_sold, 0) * p.purchase_price, 2) AS real_cost_basis,
+        -- Total cost basis
+        (ROUND((shares_purchased - COALESCE(shares_sold, 0)) * p.purchase_price, 2) + 
+			ROUND(COALESCE(shares_sold, 0) * p.purchase_price, 2)) AS total_cost_basis,
+        -- S&P 500 comparible cost basis
+        sp.adj_close AS sp500_cost_basis,
+        -- Provide years held for existing shares
+        CASE
+			WHEN shares_purchased - COALESCE(shares_sold, 0) > 0
+				THEN ROUND(DATEDIFF(CURDATE(), p.purchase_date) / 365.2425, 2)
+			ELSE NULL
+		END AS unr_years_held
 	FROM purchases AS p
+    -- Join sellings history
 	LEFT JOIN sellings AS s
 		USING(symbol, purchase_date, purchase_price)
-	/*LEFT JOIN (
+	-- Join S&P 500 price history
+    LEFT JOIN (
 		SELECT date, adj_close
         FROM prices
         WHERE symbol = '^GSPC'
     ) AS sp
-		ON p.purchase_date = sp.date*/),
+		ON p.purchase_date = sp.date),
 -- Current holdings with share counts
 holdings AS (
 	SELECT symbol, SUM(current_shares) AS shares
@@ -166,8 +181,13 @@ final AS (
 )
 
 SELECT *
-FROM basis;
--- Figure out if basis should go before holdings to figure out the unrealized
--- basis, returns, years held, vs SP, etc. for each purchase history
--- Would potentially do the same for realized values
--- Then join holdings CTE to the others in the end
+FROM share_counts
+LIMIT 10;
+-- Get rid of basis CTE and use share_counts to replace it
+
+SELECT *
+FROM portfolio
+LIMIT 5;
+
+SELECT *
+FROM current_holdings;
