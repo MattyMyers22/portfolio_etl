@@ -108,6 +108,9 @@ share_counts AS (
 			ROUND(COALESCE(shares_sold, 0) * p.purchase_price, 2)) AS total_cost_basis,
         -- S&P 500 comparible cost basis
         sp.adj_close AS sp500_cost_basis,
+        -- S&P 500 recent price
+        (SELECT adj_close FROM prices WHERE symbol = '^GSPC'
+			AND date = (SELECT MAX(date) FROM prices)) AS sp500_price,
         -- Provide years held for existing shares
         CASE
 			WHEN shares_purchased - COALESCE(shares_sold, 0) > 0
@@ -180,10 +183,32 @@ final AS (
 	ORDER BY value DESC
 )
 
-SELECT *
+SELECT s.symbol, purchase_date, purchase_price, current_shares, unr_cost_basis, real_cost_basis, 
+	sp500_cost_basis, sp500_price, unr_years_held,
+	-- Recent share price
+    p.adj_close AS recent_price,
+    -- Total unrealized profit/loss
+    ROUND((p.adj_close - purchase_price) * current_shares, 2) AS tot_unr_pl
+FROM share_counts AS s
+INNER JOIN holdings AS h
+	USING(symbol)
+LEFT JOIN prices AS p
+	USING(symbol)
+WHERE p.date = (SELECT MAX(date) FROM prices)
+LIMIT 15;
+
+/*
+SELECT symbol, 
+    SUM(current_shares) AS shares, SUM(unr_cost_basis) AS tot_unr_cost_basis,
+	SUM(real_cost_basis) AS tot_real_cost_basis, SUM(total_cost_basis) AS total_cost_basis,
+    SUM(sp500_cost_basis) AS unr_sp500_basis, 
+    -- Weighted average of years held for current holdings
+    ROUND(AVG(current_shares * unr_years_held), 2) AS avg_unr_yrs_held
 FROM share_counts
+GROUP BY symbol
 LIMIT 10;
--- Get rid of basis CTE and use share_counts to replace it
+*/
+-- Breaking down the profit loss for current holdings vs sp
 
 SELECT *
 FROM portfolio
