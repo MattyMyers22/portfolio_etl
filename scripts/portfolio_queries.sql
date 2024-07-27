@@ -196,6 +196,24 @@ real_totals AS (
 )
 
 SELECT *
+/*
+symbol
+current shares
+tot_unr_cost_basis
+tot_real_cost_basis
+tot_cost_basis
+tot_unr_pl
+tot_unr_sp_pl
+unr_pl_perc
+comp_unr_sp_pl_perc
+avg_unr_yrs_held
+tot_real_pl
+tot_real_sp_pl
+real_pl_perc
+comp_real_sp_pl_perc
+avg_real_yrs_held
+current_holding
+*/
 FROM real_totals;
 -- Left Join unr_totals to real_totals? 
 -- Calculate the percentages in Power BI
