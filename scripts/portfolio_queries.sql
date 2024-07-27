@@ -152,19 +152,54 @@ unr_returns AS (
 	LEFT JOIN prices AS p
 		USING(symbol)
 	WHERE p.date = (SELECT MAX(date) FROM prices)
+),
+-- Find totals in unrealized metrics for current holdings
+unr_totals AS (
+	SELECT symbol, 
+		SUM(current_shares) AS shares, SUM(unr_cost_basis) AS tot_unr_cost_basis,
+        SUM(total_cost_basis) AS tot_cost_basis,
+		SUM(tot_unr_pl) AS tot_unr_pl, SUM(unr_sp500_pl) AS tot_unr_sp_pl,
+		ROUND(SUM(current_shares * unr_years_held) / SUM(current_shares), 2) AS avg_unr_yrs_held
+	FROM unr_returns
+	GROUP BY symbol
+),
+-- Get all realized returns vs S&P 500
+real_returns AS (
+	SELECT symbol, purchase_date, shares, purchase_price, sell_date, sell_price,
+		ROUND(shares * purchase_price, 2) AS real_cost_basis, ROUND(shares * sell_price, 2) AS real_returns,
+		ROUND(DATEDIFF(sell_date, purchase_date) / 365.2425, 2) AS real_years_held,
+		sp1.adj_close AS real_sp_basis, sp2.adj_close AS real_sp_return
+	FROM portfolio AS p
+	-- Join S&P 500 prices data for cost basis
+	LEFT JOIN (
+			SELECT date, adj_close
+			FROM prices
+			WHERE symbol = '^GSPC'
+		) AS sp1
+			ON p.purchase_date = sp1.date
+	-- Join S&P 500 prices data for realized returns comparison
+	LEFT JOIN (
+			SELECT date, adj_close
+			FROM prices
+			WHERE symbol = '^GSPC'
+		) AS sp2
+			ON p.sell_date = sp2.date
+	WHERE account = 'Roth IRA' AND transaction_type = 'sell'
+),
+real_totals AS (
+	SELECT symbol, SUM(shares) AS sold_shares, SUM(real_cost_basis) AS tot_real_cost_basis,
+		SUM(real_returns) - SUM(real_cost_basis) AS tot_real_pl,
+		ROUND(SUM(real_sp_return / real_sp_basis * real_cost_basis - real_cost_basis), 2) AS comp_real_sp_pl,
+		ROUND(SUM(shares * real_years_held) / SUM(shares), 2) AS avg_real_yrs_held
+	FROM real_returns
+	GROUP BY symbol
 )
 
-SELECT symbol, 
-    SUM(current_shares) AS shares, SUM(unr_cost_basis) AS tot_unr_cost_basis,
-	SUM(real_cost_basis) AS tot_real_cost_basis, SUM(total_cost_basis) AS tot_cost_basis,
-    SUM(tot_unr_pl) AS tot_unr_pl, SUM(unr_sp500_pl) AS tot_unr_sp_pl,
-    ROUND(SUM(tot_unr_pl) / SUM(unr_cost_basis), 4) AS unr_pl_perc,
-    ROUND(SUM(unr_sp500_pl) / SUM(unr_cost_basis), 4) AS comp_unr_sp_pl_perc,
-    ROUND(SUM(current_shares * unr_years_held) / SUM(current_shares), 2) AS avg_unr_yrs_held
-FROM unr_returns
-GROUP BY symbol;
--- Need to bring in realized returns
--- Could calculate the percentages in Power BI
+SELECT *
+FROM real_totals;
+-- Left Join unr_totals to real_totals? 
+-- Calculate the percentages in Power BI
+-- Have calculated column in PowerBI to filter for stocks with current_shares
 
 SELECT *
 FROM portfolio
