@@ -136,79 +136,35 @@ holdings AS (
 	GROUP BY symbol
     -- Filter for symbols with current_shares > 0
 	HAVING SUM(current_shares) <> 0),
--- Find cost basis for current holdings
-basis AS (
-	SELECT h.symbol, shares, ROUND(SUM(unrealized_cost_basis), 2) AS unrealized_cost_basis, 
-		ROUND(SUM(realized_cost_basis), 2) AS realized_cost_basis, 
-		ROUND((SUM(unrealized_cost_basis) / shares), 2) AS avg_unr_cost_basis,
-        ROUND(SUM(COALESCE(unrealized_cost_basis, 0)) + SUM(COALESCE(realized_cost_basis, 0)), 2) AS total_cost_basis
-	FROM holdings AS h
-	INNER JOIN
-		(SELECT symbol, (purchase_price * current_shares) AS unrealized_cost_basis,
-			(purchase_price * shares_sold) AS realized_cost_basis
-		FROM share_counts) AS sub
-	USING(symbol)
-	GROUP BY h.symbol),
--- Get current value of current holdings
-value AS (
-	SELECT b.symbol, shares, ROUND(adj_close, 2) AS latest_price, ROUND((shares * adj_close), 2) AS value, 
-		avg_unr_cost_basis, unrealized_cost_basis, ROUND((shares * adj_close), 2) AS unr_return,
-		ROUND((shares * adj_close) - unrealized_cost_basis, 2) AS unrealized_pl, realized_cost_basis,
-		total_cost_basis
-	FROM basis AS b
-	INNER JOIN
-		(SELECT *
-		FROM prices
-		WHERE date = (SELECT MAX(date) FROM prices)) AS p
+-- Find unrealized returns for current holdings and vs SP 500
+unr_returns AS (
+	SELECT s.symbol, purchase_date, purchase_price, current_shares, unr_cost_basis, real_cost_basis, 
+		total_cost_basis, sp500_cost_basis, sp500_price, unr_years_held,
+		-- Recent share price
+		p.adj_close AS recent_price,
+		-- Total unrealized profit/loss
+		ROUND((p.adj_close - purchase_price) * current_shares, 2) AS tot_unr_pl,
+		-- SP500 unrealized profit/loss
+		ROUND(sp500_price / sp500_cost_basis * unr_cost_basis - unr_cost_basis, 2) AS unr_sp500_pl
+	FROM share_counts AS s
+	INNER JOIN holdings AS h
 		USING(symbol)
-),
--- Calculate all realized returns
-realized_returns AS (
-	SELECT symbol, purchase_date, shares AS shares_sold, purchase_price, sell_date, sell_price,
-		ROUND((shares * sell_price), 2) AS realized_return
-	FROM portfolio
-	WHERE account = 'Roth IRA' AND transaction_type = 'sell'
-),
--- portfolio values
-final AS (
-	SELECT *, (real_returns - realized_cost_basis) AS real_pl,
-		(SELECT SUM(value)
-		 FROM value) AS portfolio_value
-	FROM value AS v
-	LEFT JOIN (    
-		SELECT symbol, SUM(realized_return) AS real_returns
-		FROM realized_returns
-		GROUP BY symbol) AS r
+	LEFT JOIN prices AS p
 		USING(symbol)
-	ORDER BY value DESC
+	WHERE p.date = (SELECT MAX(date) FROM prices)
 )
 
-SELECT s.symbol, purchase_date, purchase_price, current_shares, unr_cost_basis, real_cost_basis, 
-	sp500_cost_basis, sp500_price, unr_years_held,
-	-- Recent share price
-    p.adj_close AS recent_price,
-    -- Total unrealized profit/loss
-    ROUND((p.adj_close - purchase_price) * current_shares, 2) AS tot_unr_pl
-FROM share_counts AS s
-INNER JOIN holdings AS h
-	USING(symbol)
-LEFT JOIN prices AS p
-	USING(symbol)
-WHERE p.date = (SELECT MAX(date) FROM prices)
-LIMIT 15;
-
-/*
 SELECT symbol, 
     SUM(current_shares) AS shares, SUM(unr_cost_basis) AS tot_unr_cost_basis,
-	SUM(real_cost_basis) AS tot_real_cost_basis, SUM(total_cost_basis) AS total_cost_basis,
-    SUM(sp500_cost_basis) AS unr_sp500_basis, 
-    -- Weighted average of years held for current holdings
-    ROUND(AVG(current_shares * unr_years_held), 2) AS avg_unr_yrs_held
-FROM share_counts
-GROUP BY symbol
-LIMIT 10;
-*/
--- Breaking down the profit loss for current holdings vs sp
+	SUM(real_cost_basis) AS tot_real_cost_basis, SUM(total_cost_basis) AS tot_cost_basis,
+    SUM(tot_unr_pl) AS tot_unr_pl, SUM(unr_sp500_pl) AS tot_unr_sp_pl,
+    ROUND(SUM(tot_unr_pl) / SUM(unr_cost_basis), 4) AS unr_pl_perc,
+    ROUND(SUM(unr_sp500_pl) / SUM(unr_cost_basis), 4) AS comp_unr_sp_pl_perc,
+    ROUND(SUM(current_shares * unr_years_held) / SUM(current_shares), 2) AS avg_unr_yrs_held
+FROM unr_returns
+GROUP BY symbol;
+-- Need to bring in realized returns
+-- Could calculate the percentages in Power BI
 
 SELECT *
 FROM portfolio
