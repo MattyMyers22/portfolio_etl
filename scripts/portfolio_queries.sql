@@ -2,86 +2,11 @@
 USE portfolio_dwh;
 
 -- Drop current holdings view if exists
-DROP VIEW IF EXISTS current_holdings;
+DROP VIEW IF EXISTS portfolio_metrics;
 
 -- Create view for current holdings
-CREATE VIEW current_holdings AS
--- Purchase history
-WITH purchases AS (	
-    SELECT symbol, purchase_date, purchase_price, SUM(shares) AS shares_purchased
-	FROM portfolio
-	WHERE account = 'Roth IRA' AND transaction_type IN ('buy', 'reinvestment')
-	GROUP BY symbol, purchase_date, purchase_price),
--- Selling history
-sellings AS (
-	SELECT symbol, purchase_date, purchase_price, SUM(shares) AS shares_sold
-	FROM portfolio
-    WHERE account = 'Roth IRA' AND transaction_type = 'sell'
-    GROUP BY symbol, purchase_date, purchase_price),
--- Find current share counts
-current AS (
-	SELECT p.symbol, p.purchase_date, p.purchase_price, shares_purchased, shares_sold,
-		shares_purchased - COALESCE(shares_sold, 0) AS current_shares
-	FROM purchases AS p
-	LEFT JOIN sellings AS s
-		USING(symbol, purchase_date, purchase_price)),
--- Current holdings with share counts
-holdings AS (
-	SELECT symbol, SUM(current_shares) AS shares
-	FROM current
-	GROUP BY symbol
-	HAVING SUM(current_shares) <> 0),
--- Find cost basis for current holdings
-basis AS (
-	SELECT h.symbol, shares, ROUND(SUM(unrealized_cost_basis), 2) AS unrealized_cost_basis, 
-		ROUND(SUM(realized_cost_basis), 2) AS realized_cost_basis, 
-		ROUND((SUM(unrealized_cost_basis) / shares), 2) AS avg_unr_cost_basis,
-        ROUND(SUM(COALESCE(unrealized_cost_basis, 0)) + SUM(COALESCE(realized_cost_basis, 0)), 2) AS total_cost_basis
-	FROM holdings AS h
-	INNER JOIN
-		(SELECT symbol, (purchase_price * current_shares) AS unrealized_cost_basis,
-			(purchase_price * shares_sold) AS realized_cost_basis
-		FROM current) AS sub
-	USING(symbol)
-	GROUP BY h.symbol),
--- Get current value of current holdings
-value AS (
-	SELECT b.symbol, shares, ROUND(adj_close, 2) AS latest_price, ROUND((shares * adj_close), 2) AS value, 
-		avg_unr_cost_basis, unrealized_cost_basis, ROUND((shares * adj_close), 2) AS unr_return,
-		ROUND((shares * adj_close) - unrealized_cost_basis, 2) AS unrealized_pl, realized_cost_basis,
-		total_cost_basis
-	FROM basis AS b
-	INNER JOIN
-		(SELECT *
-		FROM prices
-		WHERE date = (SELECT MAX(date) FROM prices)) AS p
-		USING(symbol)
-),
--- Calculate all realized returns
-realized_returns AS (
-	SELECT symbol, purchase_date, shares AS shares_sold, purchase_price, sell_date, sell_price,
-		ROUND((shares * sell_price), 2) AS realized_return
-	FROM portfolio
-	WHERE account = 'Roth IRA' AND transaction_type = 'sell'
-)
-
-SELECT *, (real_returns - realized_cost_basis) AS real_pl,
-	(SELECT SUM(value)
-     FROM value) AS portfolio_value
-FROM value AS v
-LEFT JOIN (    
-	SELECT symbol, SUM(realized_return) AS real_returns
-	FROM realized_returns
-	GROUP BY symbol) AS r
-	USING(symbol)
-ORDER BY value DESC;
-
-SELECT *
-FROM current_holdings;
-
-SELECT * FROM cash;
-
--- Main CTE for testing and changing
+CREATE VIEW portfolio_metrics AS
+-- Main CTE for performance metrics on all open and closed positions
 WITH purchases AS (	
     SELECT symbol, purchase_date, purchase_price, SUM(shares) AS shares_purchased
 	FROM portfolio
@@ -189,39 +114,27 @@ real_returns AS (
 real_totals AS (
 	SELECT symbol, SUM(shares) AS sold_shares, SUM(real_cost_basis) AS tot_real_cost_basis,
 		SUM(real_returns) - SUM(real_cost_basis) AS tot_real_pl,
-		ROUND(SUM(real_sp_return / real_sp_basis * real_cost_basis - real_cost_basis), 2) AS comp_real_sp_pl,
+		ROUND(SUM(real_sp_return / real_sp_basis * real_cost_basis - real_cost_basis), 2) AS tot_real_sp_pl,
 		ROUND(SUM(shares * real_years_held) / SUM(shares), 2) AS avg_real_yrs_held
 	FROM real_returns
 	GROUP BY symbol
 )
 
-SELECT *
-/*
-symbol
-current shares
-tot_unr_cost_basis
-tot_real_cost_basis
-tot_cost_basis
-tot_unr_pl
-tot_unr_sp_pl
-unr_pl_perc
-comp_unr_sp_pl_perc
-avg_unr_yrs_held
-tot_real_pl
-tot_real_sp_pl
-real_pl_perc
-comp_real_sp_pl_perc
-avg_real_yrs_held
-current_holding
-*/
-FROM real_totals;
--- Left Join unr_totals to real_totals? 
--- Calculate the percentages in Power BI
--- Have calculated column in PowerBI to filter for stocks with current_shares
+-- Final data for positions still holding
+SELECT u.symbol, shares AS current_shares, tot_unr_cost_basis, tot_real_cost_basis,
+	tot_unr_cost_basis + tot_real_cost_basis AS tot_cost_basis, tot_unr_pl,
+    tot_unr_sp_pl, avg_unr_yrs_held, tot_real_pl, tot_real_sp_pl, avg_real_yrs_held
+FROM unr_totals AS u
+LEFT JOIN real_totals AS r
+	USING(symbol)
+-- Combine with other data set
+UNION
+-- Final data for closed positions
+SELECT symbol, NULL AS current_shares, NULL AS tot_unr_cost_basis, tot_real_cost_basis, 
+	tot_real_cost_basis AS tot_cost_basis, NULL AS tot_unr_pl, NULL AS tot_unr_sp_pl,
+    NULL AS avg_unr_yrs_held, tot_real_pl, tot_real_sp_pl, avg_real_yrs_held
+FROM real_totals
+WHERE symbol NOT IN (SELECT symbol FROM holdings);
 
 SELECT *
-FROM portfolio
-LIMIT 5;
-
-SELECT *
-FROM current_holdings;
+FROM portfolio_metrics;
