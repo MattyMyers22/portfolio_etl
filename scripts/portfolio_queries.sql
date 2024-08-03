@@ -61,6 +61,12 @@ holdings AS (
 	GROUP BY symbol
     -- Filter for symbols with current_shares > 0
 	HAVING SUM(current_shares) <> 0),
+-- Get prices with row number by symbol ordered by date desc
+pricing_order AS (
+	SELECT symbol, adj_close, date,
+		ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY date DESC) AS num
+	FROM prices
+),
 -- Find unrealized returns for current holdings and vs SP 500
 unr_returns AS (
 	SELECT s.symbol, purchase_date, purchase_price, current_shares, unr_cost_basis, real_cost_basis, 
@@ -74,9 +80,9 @@ unr_returns AS (
 	FROM share_counts AS s
 	INNER JOIN holdings AS h
 		USING(symbol)
-	LEFT JOIN prices AS p
+	LEFT JOIN pricing_order AS p
 		USING(symbol)
-	WHERE p.date = (SELECT MAX(date) FROM prices)
+	WHERE p.num = 1
 ),
 -- Find totals in unrealized metrics for current holdings
 unr_totals AS (
@@ -111,6 +117,7 @@ real_returns AS (
 			ON p.sell_date = sp2.date
 	WHERE account = 'Roth IRA' AND transaction_type = 'sell'
 ),
+-- Get all realized totals
 real_totals AS (
 	SELECT symbol, SUM(shares) AS sold_shares, SUM(real_cost_basis) AS tot_real_cost_basis,
 		SUM(real_returns) - SUM(real_cost_basis) AS tot_real_pl,
@@ -122,7 +129,7 @@ real_totals AS (
 
 -- Final data for positions still holding
 SELECT u.symbol, shares AS current_shares, tot_unr_cost_basis, tot_real_cost_basis,
-	tot_unr_cost_basis + tot_real_cost_basis AS tot_cost_basis, tot_unr_pl,
+	tot_unr_cost_basis + COALESCE(tot_real_cost_basis, 0) AS tot_cost_basis, tot_unr_pl,
     tot_unr_sp_pl, avg_unr_yrs_held, tot_real_pl, tot_real_sp_pl, avg_real_yrs_held
 FROM unr_totals AS u
 LEFT JOIN real_totals AS r
@@ -135,6 +142,3 @@ SELECT symbol, NULL AS current_shares, NULL AS tot_unr_cost_basis, tot_real_cost
     NULL AS avg_unr_yrs_held, tot_real_pl, tot_real_sp_pl, avg_real_yrs_held
 FROM real_totals
 WHERE symbol NOT IN (SELECT symbol FROM holdings);
-
-SELECT *
-FROM portfolio_metrics;
