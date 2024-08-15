@@ -1,6 +1,7 @@
 # Investment Portfolio ETL Pipeline 
-This project aims to provide a structure for extracting investment portfolio data stored in Google Sheets, as well 
-as financial data through Yahoo Finance, to transform and load into a SQL database.
+This project aims to provide a workflow for extracting investment portfolio data stored in Google Sheets, as well 
+as financial data through Yahoo Finance, to transform and load into a SQL database for analysis with a BI tool 
+such as Power BI.
 
 ## Initial Setup
 * MySQL
@@ -11,11 +12,10 @@ as financial data through Yahoo Finance, to transform and load into a SQL databa
   ![image](images/portfolio_data_example.JPG)
   
   Currently, there are three options for transaction types (buy, sell, reinvestment), where reinvestment is an 
-  automatic reinvestment of dividends into the holding it is paid out from. Each sell transaction is note with 
-  the original purchase price and date.
+  automatic reinvestment of dividends into the holding it is paid out from.
 
   * One tab named 'Cash' for historical cash values in investment accounts
-(need example tables)
+  ![image](images/cash_gSheet_example.JPG)
 
 ## Data Sources
 There are two data sources that are required for extraction of the information needed.
@@ -31,16 +31,10 @@ Google's documentation for a Python quickstart with their Google Sheets API.
 
 ## Workflow
 
-* Create database
+* Database setup
 * Create venv
-* Activate venv
-* Install dependencies from requirements.txt
-* Connect to GSheet
-* Extract from GSheet
-* Extract from yahoo finance
-* Transform data into tables
-* Connect to database
-* Load into database
+* Setup config.py file
+* Orchestration
 
 ### Setting Up The Database
 Once MySQL Server is setup, a database needs to be created. This can be done from the terminal by 
@@ -57,11 +51,11 @@ Enter your sudo Linux password, followed by your database user (root) password.
 CREATE DATABASE portfolio_dwh;
 ```
 
-## Orchestration
+### Orchestration
 * Set up venv to create and activate from bash script
 * Work towards Airflow
 
-### Order of Execution
+#### Order of Execution
 1. extract_gsheet.py
 2. extract_yfinance.py
     * first executed for S&P from start
