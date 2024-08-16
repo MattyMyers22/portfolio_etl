@@ -70,8 +70,8 @@ python3 -m venv etl_env
 
 ### Config File
 Both the extract_gsheet.py and load.py scripts utilize variables from a config.py file that will need to 
-be created and saved in the scripts directory. Copy and paste the examples below while updating the values 
-with yours. Otherwise they could be worked to use environment variables instead.
+be created and saved in the scripts directory. Copy and paste the examples below into config.py while 
+updating the values with yours. Otherwise they could be worked to use environment variables instead.
 
 **Example config.py script**
 ``` python
