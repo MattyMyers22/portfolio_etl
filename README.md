@@ -19,6 +19,10 @@ The following are needed in order to get setup and properly run this project
   * One tab named 'Cash' for historical cash values in investment accounts
   ![image](images/cash_gSheet_example.JPG)
 
+### Operating System
+This project and directions are tailored towards a Linux operating system. It can be adjusted for windows or 
+used through Windows Subsystem Linux.
+
 ## Data Sources
 There are two data sources that are required for extraction of the information needed.
 * Google Sheet (Extracted through API)
@@ -40,8 +44,8 @@ Google's documentation for a Python quickstart with their Google Sheets API.
 * Connect BI Tool to database
 
 ### Setting Up The Database
-Once MySQL Server is setup, a database needs to be created. This can be done from the terminal by 
-executing the following steps.
+Once MySQL Server is downloaded and a user profile is made, a database needs to be created. This can be done from the terminal 
+by executing the following steps.
 
 **Access MySQL from terminal (replace 'root' with your username)**
 ``` bash
