@@ -30,12 +30,14 @@ There are two data sources that are required for extraction of the information n
 A Google Account and Project must be created. [Here](https://developers.google.com/sheets/api/quickstart/python) is a link to 
 Google's documentation for a Python quickstart with their Google Sheets API.
 
-## Workflow
+## Initial Setup
 
 * Database setup
 * Create venv
 * Setup config.py file
 * Orchestration
+* Create View for portfolio metrics in database
+* Connect BI Tool to database
 
 ### Setting Up The Database
 Once MySQL Server is setup, a database needs to be created. This can be done from the terminal by 
