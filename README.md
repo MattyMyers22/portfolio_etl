@@ -27,7 +27,6 @@ There are two data sources that are required for extraction of the information n
   * S&P 500 historical prices
   * Historical prices for current portfolio holdings from purchase date
 
-## References
 A Google Account and Project must be created. [Here](https://developers.google.com/sheets/api/quickstart/python) is a link to 
 Google's documentation for a Python quickstart with their Google Sheets API.
 
