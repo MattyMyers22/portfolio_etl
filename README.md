@@ -36,14 +36,14 @@ Google's documentation for a Python quickstart with their Google Sheets API.
 
 ## Initial Setup
 
-* Database setup
-* Create venv
-* Setup config.py file
+* Database
+* Python Virtual Environment
+* Config File
 * Orchestration
-* Create View for portfolio metrics in database
-* Connect BI Tool to database
+* Portfolio Metrics View
+* BI Tool
 
-### Setting Up The Database
+### Database
 Once MySQL Server is downloaded and a user profile is made, a database needs to be created. This can be done from the terminal 
 by executing the following steps.
 
@@ -58,9 +58,49 @@ Enter your sudo Linux password, followed by your database user (root) password.
 CREATE DATABASE portfolio_dwh;
 ```
 
+### Python Virtual Environment
+A python virtual environment through the venv module is used for managing packages and dependencies.
+One can be created with the name `etl_env` from the terminal by navigating to the main project directory 
+and executing the command below.
+
+**Make pipeline.sh executable**
+``` bash
+python3 -m venv etl_env
+```
+
+### Config File
+Both the extract_gsheet.py and load.py scripts utilize variables from a config.py file that will need to 
+be created and saved in the scripts directory. Copy and paste the examples below while updating the values 
+with yours. Otherwise they could be worked to use environment variables instead.
+
+**Example config.py script**
+``` python
+# Google Sheet ID
+spreadsheet_id = '[your_google_sheet_id]'
+
+# Database name
+db_name = 'portfolio_dwh'
+
+# Database username
+db_user = '[your_db_username]'
+
+# Database password
+db_pwd = '[your_db_password]'
+
+# Database host (localhost if running locally)
+db_host = '[your_db_host]'
+```
+
 ### Orchestration
-* Set up venv to create and activate from bash script
-* Work towards Airflow
+This ETL pipeline is setup to use the pipeline.sh script for orchestration, and the script can 
+be scheduled with a task manager. In order to run the script, the script must be set to executable. This 
+can be done by navigating to the ./portfolio_etl/scripts directory in the terminal and executing the 
+following command.
+
+**Make pipeline.sh executable**
+``` bash
+chmod +x script_name.sh
+```
 
 #### Order of Execution
 1. extract_gsheet.py
@@ -75,5 +115,13 @@ CREATE DATABASE portfolio_dwh;
     * drops tables
     * loads cleaned excels into tables
 
-## Database Entity Relationships
+#### Database Entity Relationships
+When the ETL pipeline is running properly, there should be three tables within the database modeled as
+seen below.
+
 ![image](images/ER_Portfolio_DWH.png)
+
+### Portfolio Metrics View
+
+
+### BI Tool
