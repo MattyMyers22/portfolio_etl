@@ -69,8 +69,8 @@ python3 -m venv etl_env
 ```
 
 ### Config File
-Both the extract_gsheet.py and load.py scripts utilize variables from a config.py file that will need to 
-be created and saved in the scripts directory. Copy and paste the examples below into config.py while 
+Both the `extract_gsheet.py` and `load.py` scripts utilize variables from a `config.py` file that will need to 
+be created and saved in the `scripts` directory. Copy and paste the examples below into `config.py` while 
 updating the values with yours. Otherwise they could be worked to use environment variables instead.
 
 **Example config.py script**
@@ -94,7 +94,7 @@ db_host = '[your_db_host]'
 ### Orchestration
 This ETL pipeline is setup to use the pipeline.sh script for orchestration, and the script can 
 be scheduled with a task manager. In order to run the script, the script must be set to executable. This 
-can be done by navigating to the ./portfolio_etl/scripts directory in the terminal and executing the 
+can be done by navigating to the `./portfolio_etl/scripts` directory in the terminal and executing the 
 following command.
 
 **Make pipeline.sh executable**
