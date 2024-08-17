@@ -92,7 +92,7 @@ db_host = '[your_db_host]'
 ```
 
 ### Orchestration
-This ETL pipeline is setup to use the pipeline.sh script for orchestration, and the script can 
+This ETL pipeline is setup to use the `pipeline.sh` script for orchestration, and the script can 
 be scheduled with a task manager. In order to run the script, the script must be set to executable. This 
 can be done by navigating to the `./portfolio_etl/scripts` directory in the terminal and executing the 
 following command.
@@ -103,17 +103,17 @@ chmod +x script_name.sh
 ```
 
 #### Order of Execution
-1. extract_gsheet.py
-2. extract_yfinance.py
-    * first executed for S&P from start
-    * then executed for list of current holdings most recent price
-    * concat these dataframes and return raw excel
-3. transorm.py
-    * save cleaned versions as excels
-4. load.py
-    * connects to database
-    * drops tables
-    * loads cleaned excels into tables
+`pipeline.sh` will perform the following tasks in order.
+
+1. Activate etl_env
+2. Install required packages from `requirements.txt`
+3. Execute `extract_gsheet.py` to extract data from Google Sheets and save as excels in a directory 
+titled `data`
+4. Execute `extract_yfinance.py` to get historical price data of the holdings and S&P 500, with the 
+raw data saved as an excel in the `data` directory
+5. Execute `transform.py` which cleans the raw data and saves them as excels in the `data` directory
+6. Execute `load.py` to load the cleaned data into the MySQL database
+7. Deactivate etl_env
 
 #### Database Entity Relationships
 When the ETL pipeline is running properly, there should be three tables within the database modeled as
