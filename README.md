@@ -122,6 +122,20 @@ seen below.
 ![image](images/ER_Portfolio_DWH.png)
 
 ### Portfolio Metrics View
+After the database has been set up and the pipeline has been run, a view can be created using the 
+`portfolio_view.sql` script for calculating portfolio metrics for returns and comparison versus 
+the S&P 500. This script can be loaded into MySQL Workbench, the terminal, or any IDE connected 
+to the database for execution.
 
+Note that the example code in `portfolio_views.sql` is set up for analyzing one account at a time 
+as noted in the WHERE clauses at lines 13, 19, and 118. Simply replace 'Roth IRA' with whichever 
+name you denote for your account of interest. Or you can remove `account = 'Roth IRA' AND` from 
+those lines entirely to analyze all accounts together.
+
+The created view will result in the following columns.
 
 ### BI Tool
+Once the view has been created, a BI tool such as Power BI can be connected to the database and 
+each of the three tables plus the view. Then any time the pipeline is executed, the a refresh of 
+data in the BI tool project can be executed. Additional calculated columns and measures can be 
+creating using the BI tool project to build a report like the example found as `portfolio_report.pdf`.
