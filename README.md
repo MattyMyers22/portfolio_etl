@@ -134,8 +134,18 @@ those lines entirely to analyze all accounts together.
 
 The created view will result in the following columns.
 
+![image](images/portfolio_metrics_view.png)
+
 ### BI Tool
-Once the view has been created, a BI tool such as Power BI can be connected to the database and 
-each of the three tables plus the view. Then any time the pipeline is executed, the a refresh of 
+Once the view has been created, a BI tool such as Power BI can be connected to each of the three 
+tables plus the view in the database. Then any time the pipeline is completed, a refresh of the 
 data in the BI tool project can be executed. Additional calculated columns and measures can be 
 creating using the BI tool project to build a report like the example found as `portfolio_report.pdf`.
+
+## Future Iterations
+More work can be done to improve the pipeline in the following ways.
+
+* Orchestration with Airflow
+* Incremental load of the data through the pipeline
+* Proper data modeling (Star Schema)
+* Deploying in the cloud
