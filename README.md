@@ -3,6 +3,8 @@ This project aims to provide a workflow for extracting investment portfolio data
 as financial data through Yahoo Finance, to transform and load into a SQL database for analysis with a BI tool 
 such as Power BI.
 
+My most recent portfolio report can be found in `portfolio_report.pdf`.
+
 ## Initial Requirements
 The following are needed in order to get setup and properly run this project
 * MySQL
