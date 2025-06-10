@@ -1,16 +1,14 @@
 # Investment Portfolio ETL Pipeline 
-This project aims to provide a workflow for extracting investment portfolio data stored in Google Sheets, as well 
-as financial data through Yahoo Finance, to transform and load into a SQL database for analysis with a BI tool 
-such as Power BI.
-
-My most recent portfolio report can be found in `portfolio_report.pdf`.
+This project aims to provide an ETL Pipeline for extracting investment portfolio data stored in Google Sheets, as well 
+as financial data through Yahoo Finance, that can be deployed in GCP resulting in a Looker Dashboard to track results.
 
 ## Initial Requirements
 The following are needed in order to get setup and properly run this project
-* MySQL
+
 * Python >= Verion 3
   * IDE of choice
 * Google Account
+* Google Cloud Provider Account
 * Google Sheet with two tabs containing portfolio data
   * One tab named 'Transactions' containing portfolio transaction history
   ![image](images/portfolio_data_example.JPG)
