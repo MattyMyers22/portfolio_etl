@@ -6,8 +6,23 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from config import spreadsheet_id
+# Needs to get variables from .env file
+# from config import spreadsheet_id
 import pandas as pd
+
+# Testing .env variables
+from dotenv import load_dotenv
+from pathlib import Path
+import os
+
+# Get the path to the project root (1 level up from current file)
+env_path = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(dotenv_path=env_path)
+
+# Access your env variables
+api_key = os.getenv("GCP_SERVICE_ACCOUNT_KEY")
+# Print the API key to verify it's loaded (for testing purposes)
+print(api_key)
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
