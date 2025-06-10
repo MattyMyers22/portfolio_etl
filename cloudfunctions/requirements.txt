@@ -6,3 +6,6 @@ pandas
 openpyxl
 yfinance
 sqlalchemy
+dotenv
+pathlib
+os
