@@ -21,6 +21,7 @@ load_dotenv(dotenv_path=env_path)
 
 # Access your env variables
 api_key = os.getenv("GCP_SERVICE_ACCOUNT_KEY")
+spreadsheet_id = os.getenv("SPREADSHEET_ID")
 # Print the API key to verify it's loaded (for testing purposes)
 print(api_key)
 
