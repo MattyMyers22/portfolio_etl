@@ -2,6 +2,7 @@
 import os.path
 
 from google.auth.transport.requests import Request
+from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -14,13 +15,15 @@ import pandas as pd
 from dotenv import load_dotenv
 from pathlib import Path
 import os
+import json
 
-# Get the path to the project root (1 level up from current file)
+# Get the path to the project root (2 levels up from current file)
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 
 # Access your env variables
-api_key = os.getenv("GCP_SERVICE_ACCOUNT_KEY")
+key_data = os.getenv("GCP_SERVICE_ACCOUNT_KEY")
+api_key = json.loads(key_data)
 spreadsheet_id = os.getenv("SPREADSHEET_ID")
 # Print the API key to verify it's loaded (for testing purposes)
 print(api_key)
