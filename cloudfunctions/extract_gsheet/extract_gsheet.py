@@ -21,8 +21,9 @@ api_key = json.loads(key_data)
 spreadsheet_id = os.getenv("SPREADSHEET_ID")
 storage_bucket = os.getenv("BUCKET_NAME")
 
-# Define scopes for GCP Service Account connection
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+# Define scopes for GCP Service Account connections
+SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+GCS_SCOPES = ["https://www.googleapis.com/auth/devstorage.read_write"]
 
 # The ID and range of a sample spreadsheet.
 SAMPLE_SPREADSHEET_ID = spreadsheet_id
@@ -41,7 +42,7 @@ def upload_to_gcs(bucket_name, source_file_name, destination_blob_name, creds):
 def extract_and_save(range_name):
     """Extracts data from the given range of the Google Sheet and saves as CSV in GCS."""
     try:
-        creds = service_account.Credentials.from_service_account_info(api_key, scopes=SCOPES)
+        creds = service_account.Credentials.from_service_account_info(api_key, scopes=SHEETS_SCOPES)
         service = build("sheets", "v4", credentials=creds)
         sheet = service.spreadsheets()
         result = (
@@ -56,6 +57,9 @@ def extract_and_save(range_name):
         df = pd.DataFrame(data=values[1:], columns=values[0])
         print(f"\nHead of data for range '{range_name}':")
         print(df.head())
+
+        # Create separate credentials for Google Cloud Storage
+        gcs_creds = service_account.Credentials.from_service_account_info(api_key, scopes=GCS_SCOPES)
         # Save to temp CSV and upload
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
             print(tmp.name)
@@ -64,7 +68,7 @@ def extract_and_save(range_name):
             # Clean up range_name for filename
             safe_name = 'Transactions' if range_name.startswith('Transactions') else 'Cash'
             destination_blob_name = f"raw/{safe_name}.csv"
-            upload_to_gcs(storage_bucket, tmp.name, destination_blob_name, creds)
+            upload_to_gcs(storage_bucket, tmp.name, destination_blob_name, gcs_creds)
         os.remove(tmp.name)
     except HttpError as err:
         print(err)
