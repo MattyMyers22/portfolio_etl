@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 import json
+from google.cloud import storage
+import tempfile
 
 # Get the path to the project root (2 levels up from current file)
 env_path = Path(__file__).resolve().parents[2] / ".env"
@@ -27,8 +29,17 @@ SAMPLE_SPREADSHEET_ID = spreadsheet_id
 SAMPLE_RANGE_NAMES = ['Transactions!A:H', 'Cash!A:C']
 
 
-def extract(range_name):
-    """Extracts data from the given range of the Google Sheet and prints the head."""
+def upload_to_gcs(bucket_name, source_file_name, destination_blob_name, creds):
+    """Uploads a file to the bucket."""
+    client = storage.Client(credentials=creds)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_filename(source_file_name)
+    print(f"File {source_file_name} uploaded to gs://{bucket_name}/{destination_blob_name}.")
+
+
+def extract_and_save(range_name):
+    """Extracts data from the given range of the Google Sheet and saves as CSV in GCS."""
     try:
         creds = service_account.Credentials.from_service_account_info(api_key, scopes=SCOPES)
         service = build("sheets", "v4", credentials=creds)
@@ -45,9 +56,19 @@ def extract(range_name):
         df = pd.DataFrame(data=values[1:], columns=values[0])
         print(f"\nHead of data for range '{range_name}':")
         print(df.head())
+        # Save to temp CSV and upload
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
+            print(tmp.name)
+            df.to_csv(tmp.name, index=False)
+            tmp.flush()
+            # Clean up range_name for filename
+            safe_name = 'Transactions' if range_name.startswith('Transactions') else 'Cash'
+            destination_blob_name = f"raw/{safe_name}.csv"
+            upload_to_gcs(storage_bucket, tmp.name, destination_blob_name, creds)
+        os.remove(tmp.name)
     except HttpError as err:
         print(err)
 
 # Execute script for each sheet range
 for range_name in SAMPLE_RANGE_NAMES:
-    extract(range_name)
+    extract_and_save(range_name)
