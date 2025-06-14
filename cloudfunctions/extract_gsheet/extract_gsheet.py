@@ -1,4 +1,4 @@
-# Extract investment data from Google Sheets
+# Extract investment data from Google Sheets and save in Storage Bucket
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -17,8 +17,9 @@ load_dotenv(dotenv_path=env_path)
 key_data = os.getenv("GCP_SERVICE_ACCOUNT_KEY")
 api_key = json.loads(key_data)
 spreadsheet_id = os.getenv("SPREADSHEET_ID")
+storage_bucket = os.getenv("BUCKET_NAME")
 
-# If modifying these scopes, delete the file token.json.
+# Define scopes for GCP Service Account connection
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 # The ID and range of a sample spreadsheet.
