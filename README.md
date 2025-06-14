@@ -23,6 +23,21 @@ The following are needed in order to get setup and properly run this project
 This project and directions are tailored towards a Linux operating system. It can be adjusted for windows or 
 used through Windows Subsystem Linux.
 
+### GCP Setup
+This project is designed to be deployed through Google Cloud Provider using the following GCP services.
+* Google Sheets API
+* Cloud Storage
+* Cloud Functions
+* BigQuery
+
+Perform the following steps to setup your GCP account.
+1. Create a new project in your GCP account. 
+2. Enable Google Sheets API
+3. Create service account credential
+  * Save JSON key in .env file
+4. Create Cloud Storage bucket
+  * Save name in .env file
+
 ## Data Sources
 There are two data sources that are required for extraction of the information needed.
 * Google Sheet (Extracted through API)
