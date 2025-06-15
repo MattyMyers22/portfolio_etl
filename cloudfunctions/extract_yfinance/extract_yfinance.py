@@ -55,6 +55,15 @@ def extract_yfinance(ticker='^GSPC', start_date=PORTFOLIO_START_DATE, end_date=N
     # Return S&P 500 dataframe
     return data
 
+# Create credentials for Google Cloud Storage
+gcs_creds = service_account.Credentials.from_service_account_info(api_key, scopes=GCS_SCOPES)
+client = storage.Client(credentials=gcs_creds)
+
+# Download Transactions.csv from GCS
+bucket = client.bucket(storage_bucket)
+blob = bucket.blob('raw/Transactions.csv')
+csv_content = blob.download_as_text()
+
 # Read in raw_portfolio.xlsx
 raw_portfolio = pd.read_excel('./data/raw_portfolio.xlsx')
 
