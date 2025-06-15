@@ -71,6 +71,7 @@ def read_gcs_csv_to_df(bucket_name, blob_name, client):
 
 # Read Transactions.csv from GCS
 transactions_df = read_gcs_csv_to_df(storage_bucket, 'raw/Transactions.csv', client)
+print(f"Transactions DataFrame shape: {transactions_df.shape}")
 
 # Get DataFrame of unique symbol and min purchase_date
 tickers = transactions_df.groupby('symbol')['purchase_date'].min().reset_index()
@@ -96,6 +97,7 @@ all_dfs.append(extract_yfinance())
 historical_prices = [df for df in all_dfs if not df.empty]
 # Union all dataframes
 historical_prices = pd.concat(historical_prices, axis=0)
+print(f"Historical prices DataFrame shape: {historical_prices.shape}")
 
 # Save as CSV to a temp file and upload to GCS
 with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_csv:
@@ -106,6 +108,7 @@ with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_csv:
 bucket = client.bucket(storage_bucket)
 blob = bucket.blob('raw/raw_prices.csv')
 blob.upload_from_filename(temp_csv_path)
+print(f"Historical prices CSV uploaded to gs://{storage_bucket}/raw/raw_prices.csv")
 
 # Remove the temp file after upload
 os.remove(temp_csv_path)
