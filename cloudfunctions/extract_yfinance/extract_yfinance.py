@@ -59,16 +59,21 @@ def extract_yfinance(ticker='^GSPC', start_date=PORTFOLIO_START_DATE, end_date=N
 gcs_creds = service_account.Credentials.from_service_account_info(api_key, scopes=GCS_SCOPES)
 client = storage.Client(credentials=gcs_creds)
 
-# Download Transactions.csv from GCS
-bucket = client.bucket(storage_bucket)
-blob = bucket.blob('raw/Transactions.csv')
-csv_content = blob.download_as_text()
+# Download Transactions.csv from GCS and read into DataFrame
+def read_gcs_csv_to_df(bucket_name, blob_name, client):
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+        blob.download_to_filename(temp_file.name)
+        df = pd.read_csv(temp_file.name)
+        os.remove(temp_file.name)
+    return df
 
-# Read in raw_portfolio.xlsx
-raw_portfolio = pd.read_excel('./data/raw_portfolio.xlsx')
+# Read Transactions.csv from GCS
+transactions_df = read_gcs_csv_to_df(storage_bucket, 'raw/Transactions.csv', client)
 
 # Get DataFrame of unique symbol and min purchase_date
-tickers = raw_portfolio.groupby('symbol')['purchase_date'].min().reset_index()
+tickers = transactions_df.groupby('symbol')['purchase_date'].min().reset_index()
 # Change purchase_date to datetime
 tickers['purchase_date'] = pd.to_datetime(tickers['purchase_date']).dt.strftime('%Y-%m-%d')
 
@@ -90,7 +95,17 @@ all_dfs.append(extract_yfinance())
 # Filter empty dataframes
 historical_prices = [df for df in all_dfs if not df.empty]
 # Union all dataframes
-historical_prices = pd.concat(all_dfs, axis=0)
+historical_prices = pd.concat(historical_prices, axis=0)
 
-# Save as excel
-historical_prices.to_excel('data/raw_prices.xlsx')
+# Save as CSV to a temp file and upload to GCS
+with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_csv:
+    historical_prices.to_csv(temp_csv.name, index=False)
+    temp_csv_path = temp_csv.name
+
+# Upload the CSV to GCS
+bucket = client.bucket(storage_bucket)
+blob = bucket.blob('raw/raw_prices.csv')
+blob.upload_from_filename(temp_csv_path)
+
+# Remove the temp file after upload
+os.remove(temp_csv_path)
