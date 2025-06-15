@@ -1,13 +1,33 @@
 # Script to extract the historical prices from yfinance
 
-# Author: Matthew Myers
-
 # Import packages
 import yfinance as yf
 import pandas as pd
+from dotenv import load_dotenv
+from pathlib import Path
+import os
+import json
+from google.cloud import storage
+import tempfile
+from google.oauth2 import service_account
+
+# Get the path to the project root (2 levels up from current file)
+env_path = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(dotenv_path=env_path)
+
+# Access your env variables
+key_data = os.getenv("GCP_SERVICE_ACCOUNT_KEY")
+api_key = json.loads(key_data)
+storage_bucket = os.getenv("BUCKET_NAME")
+
+# Define scopes for GCP Service Account connections
+GCS_SCOPES = ["https://www.googleapis.com/auth/devstorage.read_write"]
+
+# Portfolio Start Date
+PORTFOLIO_START_DATE = '2019-01-30'
 
 # Function to extract S&P data of interest
-def extract_yfinance(ticker='^GSPC', start_date='2019-01-30', end_date=None):
+def extract_yfinance(ticker='^GSPC', start_date=PORTFOLIO_START_DATE, end_date=None):
     """
     Extracts historical prices of the of stocks/funds using the yfinance library.
 
