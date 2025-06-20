@@ -49,8 +49,10 @@ def extract_yfinance(ticker='^GSPC', start_date=PORTFOLIO_START_DATE, end_date=N
     # Get the S&P 500 data
     data = yf.download(ticker, start=start_date, end=end_date)
 
-    # Create symbol column with ticker
-    data['symbol'] = ticker
+    # Flatten the multi-level columns
+    data = data.stack(level=1, future_stack=True).rename_axis(['Date', 'Ticker']).reset_index()
+    # Remove name from the columns
+    data.columns.name = None
 
     # Return S&P 500 dataframe
     return data
