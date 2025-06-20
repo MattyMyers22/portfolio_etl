@@ -66,8 +66,8 @@ def extract_and_save(range_name):
             df.to_csv(tmp.name, index=False)
             tmp.flush()
             # Clean up range_name for filename
-            safe_name = 'Transactions' if range_name.startswith('Transactions') else 'Cash'
-            destination_blob_name = f"raw/{safe_name}.csv"
+            safe_name = 'transactions' if range_name.startswith('Transactions') else 'cash'
+            destination_blob_name = f"raw/raw_{safe_name}.csv"
             upload_to_gcs(storage_bucket, tmp.name, destination_blob_name, gcs_creds)
         os.remove(tmp.name)
     except HttpError as err:
