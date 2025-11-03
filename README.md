@@ -53,7 +53,7 @@ Google's documentation for a Python quickstart with their Google Sheets API.
 
 * Database
 * Python Virtual Environment
-* Config File
+* Environment Variables
 * Orchestration
 * Portfolio Metrics View
 * BI Tool
@@ -83,27 +83,15 @@ and executing the command below.
 python3 -m venv etl_env
 ```
 
-### Config File
-Both the `extract_gsheet.py` and `load.py` scripts utilize variables from a `config.py` file that will need to 
-be created and saved in the `scripts` directory. Copy and paste the examples below into `config.py` while 
-updating the values with yours. Otherwise they could be worked to use environment variables instead.
+### Environment Variables
+Scripts utilize environment variables to store GCP credentials for usage. Create a file names `.env` in the root directory of the project. Copy and paste the examples below into the file while 
+updating the values with yours.
 
-**Example config.py script**
-``` python
-# Google Sheet ID
-spreadsheet_id = '[your_google_sheet_id]'
-
-# Database name
-db_name = 'portfolio_dwh'
-
-# Database username
-db_user = '[your_db_username]'
-
-# Database password
-db_pwd = '[your_db_password]'
-
-# Database host (localhost if running locally)
-db_host = '[your_db_host]'
+**Example .env script**
+``` Bash
+GCP_SERVICE_ACCOUNT_KEY='[YOUR KEY]'
+SPREADSHEET_ID="[YOUR SPREADSHEET ID]"
+BUCKET_NAME="[YOUR GCS BUCKET]"
 ```
 
 ### Orchestration
@@ -160,7 +148,8 @@ creating using the BI tool project to build a report like the example found as `
 ## Future Iterations
 More work can be done to improve the pipeline in the following ways.
 
-* Orchestration with Airflow
+* Utilize a secrets manager
+* Orchestration Tool
 * Incremental load of the data through the pipeline
 * Proper data modeling (Star Schema)
 * Deploying in the cloud
