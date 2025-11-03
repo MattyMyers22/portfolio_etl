@@ -7,6 +7,4 @@ openpyxl
 yfinance
 sqlalchemy
 dotenv
-pathlib
-os
 google-cloud-storage
