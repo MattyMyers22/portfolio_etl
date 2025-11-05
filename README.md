@@ -23,9 +23,30 @@ The following are needed in order to get setup and properly run this project
 This project and directions are tailored towards a Linux operating system. It can be adjusted for windows or 
 used through Windows Subsystem Linux.
 
-### GCP Setup
+## Setup
+
+### Data Sources
+There are two data sources that are required for extraction of the information needed.
+* Google Sheet (Extracted through API)
+  * History of trades, holdings, and cash levels
+* Yahoo Finance (Extracted through API)
+  * S&P 500 historical prices
+  * Historical prices for current portfolio holdings from purchase date
+
+A Google Account and Project must be created. [Here](https://developers.google.com/sheets/api/quickstart/python) is a link to 
+Google's documentation for a Python quickstart with their Google Sheets API.
+
+* Database
+* Python Virtual Environment
+* Environment Variables
+* Orchestration
+* Portfolio Metrics View
+* BI Tool
+
+### GCP
 This project is designed to be deployed through Google Cloud Provider using the following GCP services.
 * Google Sheets API
+* Secrets Manager
 * Cloud Storage
 * Cloud Functions
 * BigQuery
@@ -37,26 +58,6 @@ Perform the following steps to setup your GCP account.
   * Save JSON key in .env file
 4. Create Cloud Storage bucket
   * Save name in .env file
-
-## Data Sources
-There are two data sources that are required for extraction of the information needed.
-* Google Sheet (Extracted through API)
-  * History of trades, holdings, and cash levels
-* Yahoo Finance (Extracted through API)
-  * S&P 500 historical prices
-  * Historical prices for current portfolio holdings from purchase date
-
-A Google Account and Project must be created. [Here](https://developers.google.com/sheets/api/quickstart/python) is a link to 
-Google's documentation for a Python quickstart with their Google Sheets API.
-
-## Initial Setup
-
-* Database
-* Python Virtual Environment
-* Environment Variables
-* Orchestration
-* Portfolio Metrics View
-* BI Tool
 
 ### Database
 Once MySQL Server is downloaded and a user profile is made, a database needs to be created. This can be done from the terminal 
