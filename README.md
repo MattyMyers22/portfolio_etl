@@ -45,19 +45,29 @@ Google's documentation for a Python quickstart with their Google Sheets API.
 
 ### GCP
 This project is designed to be deployed through Google Cloud Provider using the following GCP services.
+
 * Google Sheets API
 * Secrets Manager
 * Cloud Storage
 * Cloud Functions
 * BigQuery
 
-Perform the following steps to setup your GCP account.
+To test and run locally, you'll also need the Google Cloud SDK and CLI installed locally. Once that is completed, perform the following steps to setup your GCP account.
+
 1. Create a new project in your GCP account. 
 2. Enable Google Sheets API
-3. Create service account credential
-  * Save JSON key in .env file
-4. Create Cloud Storage bucket
-  * Save name in .env file
+3. Enable Secrets Manager API
+4. Create service account credential
+  * Save JSON key as secret in Secrets Manager titled GCP_SERVICE_ACCOUNT_KEY
+5. Create Cloud Storage bucket
+  * Save name as secret in Secrets Manager titled BUCKET_NAME
+6. Get Google Sheet ID from URL
+  * Save ID as secret in Secrets Manager titled SPREADSHEET_ID
+7. Log in to gcloud locally
+  * From the terminal run the following command
+```Bash
+gcloud auth application-default login
+```
 
 ### Database
 Once MySQL Server is downloaded and a user profile is made, a database needs to be created. This can be done from the terminal 
