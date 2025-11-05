@@ -2,6 +2,7 @@
 
 # Imports
 from google.oauth2 import service_account
+from google.cloud import secretmanager
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import pandas as pd
