@@ -13,21 +13,37 @@ import json
 from google.cloud import storage
 import tempfile
 
-# Get the path to the project root (2 levels up from current file)
-env_path = Path(__file__).resolve().parents[2] / ".env"
-load_dotenv(dotenv_path=env_path)
+# Project ID
+PROJECT_ID = "holdings-pipeline-storage"
 
-# Access your env variables
-key_data = os.getenv("GCP_SERVICE_ACCOUNT_KEY")
-api_key = json.loads(key_data)
-spreadsheet_id = os.getenv("SPREADSHEET_ID")
-storage_bucket = os.getenv("BUCKET_NAME")
+# Function to extract secret from GCP Secret Manager
+def access_secret_version(secret_id, version_id="latest"):
+    """
+    Access the payload for the given secret version if one exists.
+    """
+    client = secretmanager.SecretManagerServiceClient()
+    name = f"projects/{PROJECT_ID}/secrets/{secret_id}/versions/{version_id}"
+    response = client.access_secret_version(request={"name": name})
+    payload = response.payload.data.decode("UTF-8")
+    return payload
+
+# Get secrets
+GCP_SERVICE_ACCOUNT_KEY = access_secret_version('GCP_SERVICE_ACCOUNT_KEY')
+STORAGE_BUCKET = access_secret_version('BUCKET_NAME')
 
 # Define scopes for GCP Service Account connections
 GCS_SCOPES = ["https://www.googleapis.com/auth/devstorage.read_write"]
 
-# Extact raw cash data in GCS
+# Extract raw cash csv in bucket
+storage_client = storage.Client.from_service_account_info(json.loads(GCP_SERVICE_ACCOUNT_KEY))
+bucket = storage_client.bucket(STORAGE_BUCKET)
+blob = bucket.blob('raw/cash/raw_cash_data.csv')
+with tempfile.NamedTemporaryFile() as temp_file:
+    blob.download_to_filename(temp_file.name)
+    raw_cash_df = pd.read_csv(temp_file.name)
 
+print(f'\nRaw cash data extracted successfully {raw_cash_df.head()}\n')
+print(f'\nShape {raw_cash_df.shape}\n')
 
 # Clean raw cash data
 
