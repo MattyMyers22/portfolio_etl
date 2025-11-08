@@ -63,12 +63,7 @@ To test and run locally, you'll also need the Google Cloud SDK and CLI installed
 ```Bash
 gcloud auth application-default login
 ```
-
-#### Database Entity Relationships
-When the ETL pipeline is running properly, there should be three tables within the database modeled as
-seen below.
-
-![image](images/ER_Portfolio_DWH.png)
+8. 
 
 ### Portfolio Metrics View
 After the database has been set up and the pipeline has been run, a view can be created using the 
