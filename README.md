@@ -2,7 +2,7 @@
 This project aims to provide an ETL Pipeline for extracting investment portfolio data stored in Google Sheets, as well 
 as financial data through Yahoo Finance, that can be deployed in GCP resulting in a Looker Dashboard to track portfolio performance.
 
-![image](images/investments_dashboard_pipeline.JPG)
+![image](images/investments_dashboard_pipeline.jpg)
 
 ## Initial Requirements
 The following are needed in order to get setup and properly run this project
