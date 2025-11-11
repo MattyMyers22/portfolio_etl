@@ -14,7 +14,7 @@ from google.cloud import storage
 import tempfile
 
 # Project ID
-PROJECT_ID = "holdings-pipeline-storage"
+PROJECT_ID = "holdings-extract"
 
 # Function to extract secret from GCP Secret Manager
 def access_secret_version(secret_id, version_id="latest"):
@@ -37,7 +37,7 @@ GCS_SCOPES = ["https://www.googleapis.com/auth/devstorage.read_write"]
 # Extract raw cash csv in bucket
 storage_client = storage.Client.from_service_account_info(json.loads(GCP_SERVICE_ACCOUNT_KEY))
 bucket = storage_client.bucket(STORAGE_BUCKET)
-blob = bucket.blob('raw/cash/raw_cash_data.csv')
+blob = bucket.blob('raw/raw_cash.csv')
 with tempfile.NamedTemporaryFile() as temp_file:
     blob.download_to_filename(temp_file.name)
     raw_cash_df = pd.read_csv(temp_file.name)
