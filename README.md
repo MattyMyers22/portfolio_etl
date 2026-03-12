@@ -90,3 +90,5 @@ creating using the BI tool project to build a report like the example found as `
 More work can be done to improve the pipeline in the following ways.
 
 * Incremental load of the data through the pipeline
+* Use docker container for running project on any system locally or in the cloud with dependencies sorted
+* Incorporate dividends not reinvested for portfolio and performance tracking
