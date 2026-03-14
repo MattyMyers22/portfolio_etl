@@ -50,5 +50,16 @@ print('Changing date column data type')
 raw_cash_df['date'] = pd.to_datetime(raw_cash_df['date'])
 print(f'\nData types after cleaning:\n{raw_cash_df.dtypes}\n')
 
-# Save as parquet in GCS
+# Create parquet file of data
+with tempfile.NamedTemporaryFile(suffix='.parquet', delete=False) as temp_file:
+    raw_cash_df.to_parquet(temp_file.name, index=False)
+    parquet_file_path = temp_file.name
 
+# Upload parquet to GCS
+blob = bucket.blob('warehouse/clean_cash.parquet')
+blob.upload_from_filename(parquet_file_path)
+print(f'\nParquet file uploaded to gs://{STORAGE_BUCKET}/warehouse/clean_cash.parquet\n')
+
+# Clean up temp file
+os.remove(parquet_file_path)
+print(f'\nTemporary file removed: {parquet_file_path}\n')
