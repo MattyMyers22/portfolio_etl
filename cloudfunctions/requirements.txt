@@ -9,3 +9,4 @@ sqlalchemy
 dotenv
 google-cloud-storage
 google-cloud-secret-manager
+pyarrow
