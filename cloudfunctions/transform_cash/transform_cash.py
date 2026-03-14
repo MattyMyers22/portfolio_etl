@@ -46,6 +46,9 @@ print(f'\nRaw cash data extracted successfully {raw_cash_df.head()}\n')
 print(f'\nShape {raw_cash_df.shape}\n')
 
 # Clean raw cash data
-
+print('Changing date column data type')
+raw_cash_df['date'] = pd.to_datetime(raw_cash_df['date'])
+print(f'\nData types after cleaning:\n{raw_cash_df.dtypes}\n')
 
 # Save as parquet in GCS
+
