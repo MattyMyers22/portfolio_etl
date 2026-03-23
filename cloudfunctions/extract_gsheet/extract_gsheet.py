@@ -1,78 +1,142 @@
 # Extract investment data from Google Sheets and save in Storage Bucket
 
+import logging
+import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import pandas as pd
-from dotenv import load_dotenv
+
+# Import shared utilities
+import sys
 from pathlib import Path
-import os
-import json
-from google.cloud import storage
-import tempfile
 
-# Get the path to the project root (2 levels up from current file)
-env_path = Path(__file__).resolve().parents[2] / ".env"
-load_dotenv(dotenv_path=env_path)
+# Add parent directory to path to import shared modules
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from shared import SecretManager, upload_df_to_gcs
 
-# Access your env variables
-key_data = os.getenv("GCP_SERVICE_ACCOUNT_KEY")
-api_key = json.loads(key_data)
-spreadsheet_id = os.getenv("SPREADSHEET_ID")
-storage_bucket = os.getenv("BUCKET_NAME")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Define scopes for GCP Service Account connections
 SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-GCS_SCOPES = ["https://www.googleapis.com/auth/devstorage.read_write"]
 
-# The ID and range of a sample spreadsheet.
-SAMPLE_SPREADSHEET_ID = spreadsheet_id
+# The ID and range of a sample spreadsheet
 SAMPLE_RANGE_NAMES = ['Transactions!A:H', 'Cash!A:C']
 
 
-def upload_to_gcs(bucket_name, source_file_name, destination_blob_name, creds):
-    """Uploads a file to the bucket."""
-    client = storage.Client(credentials=creds)
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_filename(source_file_name)
-    print(f"File {source_file_name} uploaded to gs://{bucket_name}/{destination_blob_name}.")
-
-
-def extract_and_save(range_name):
-    """Extracts data from the given range of the Google Sheet and saves as CSV in GCS."""
+def get_api_credentials():
+    """
+    Retrieve and parse GCP service account credentials from Secret Manager.
+    
+    Returns:
+        dict: The parsed service account credentials.
+        
+    Raises:
+        RuntimeError: If credentials cannot be retrieved or parsed.
+    """
     try:
-        creds = service_account.Credentials.from_service_account_info(api_key, scopes=SHEETS_SCOPES)
+        service_account_key = SecretManager.get_secret("GCP_SERVICE_ACCOUNT_KEY")
+        credentials_dict = json.loads(service_account_key)
+        logger.info("Successfully retrieved API credentials from Secret Manager")
+        return credentials_dict
+    except Exception as e:
+        logger.error(f"Failed to retrieve API credentials: {str(e)}")
+        raise
+
+
+def get_spreadsheet_id():
+    """
+    Retrieve the Google Sheets spreadsheet ID from Secret Manager.
+    
+    Returns:
+        str: The spreadsheet ID.
+        
+    Raises:
+        RuntimeError: If the spreadsheet ID cannot be retrieved.
+    """
+    try:
+        spreadsheet_id = SecretManager.get_secret("SPREADSHEET_ID")
+        logger.info("Successfully retrieved spreadsheet ID from Secret Manager")
+        return spreadsheet_id
+    except Exception as e:
+        logger.error(f"Failed to retrieve spreadsheet ID: {str(e)}")
+        raise
+
+
+def extract_and_save(range_name, api_key, spreadsheet_id):
+    """
+    Extracts data from the given range of the Google Sheet and saves as CSV in GCS.
+    
+    Args:
+        range_name (str): The sheet range to extract (e.g., 'Transactions!A:H').
+        api_key (dict): The service account credentials dictionary.
+        spreadsheet_id (str): The Google Sheets spreadsheet ID.
+    """
+    try:
+        logger.info(f"Extracting data from range: {range_name}")
+        
+        # Create credentials for Google Sheets API
+        creds = service_account.Credentials.from_service_account_info(
+            api_key, scopes=SHEETS_SCOPES
+        )
         service = build("sheets", "v4", credentials=creds)
         sheet = service.spreadsheets()
+        
+        # Fetch data from Google Sheets
         result = (
             sheet.values()
-            .get(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=range_name)
+            .get(spreadsheetId=spreadsheet_id, range=range_name)
             .execute()
         )
+        
         values = result.get("values", [])
         if not values:
-            print(f"No data found for range {range_name}.")
+            logger.warning(f"No data found for range {range_name}")
             return
+        
+        # Create DataFrame from the sheet data
         df = pd.DataFrame(data=values[1:], columns=values[0])
+        logger.info(f"Extracted {len(df)} rows from {range_name}")
+        
         print(f"\nHead of data for range '{range_name}':")
         print(df.head())
-
-        # Create separate credentials for Google Cloud Storage
-        gcs_creds = service_account.Credentials.from_service_account_info(api_key, scopes=GCS_SCOPES)
-        # Save to temp CSV and upload
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
-            print(tmp.name)
-            df.to_csv(tmp.name, index=False)
-            tmp.flush()
-            # Clean up range_name for filename
-            safe_name = 'transactions' if range_name.startswith('Transactions') else 'cash'
-            destination_blob_name = f"raw/raw_{safe_name}.csv"
-            upload_to_gcs(storage_bucket, tmp.name, destination_blob_name, gcs_creds)
-        os.remove(tmp.name)
+        
+        # Determine the output filename based on range name
+        safe_name = 'transactions' if range_name.startswith('Transactions') else 'cash'
+        destination_blob_name = f"raw/raw_{safe_name}.csv"
+        
+        # Upload DataFrame to GCS as CSV
+        gcs_path = upload_df_to_gcs(df, destination_blob_name, file_format='csv')
+        logger.info(f"Successfully saved data to {gcs_path}")
+        
     except HttpError as err:
-        print(err)
+        logger.error(f"Google Sheets API error: {err}")
+        raise
+    except Exception as err:
+        logger.error(f"Error extracting and saving data from {range_name}: {str(err)}")
+        raise
 
-# Execute script for each sheet range
-for range_name in SAMPLE_RANGE_NAMES:
-    extract_and_save(range_name)
+
+def main():
+    """Main execution function."""
+    try:
+        logger.info("Starting Google Sheets extraction")
+        
+        # Retrieve credentials and spreadsheet ID from Secret Manager
+        api_key = get_api_credentials()
+        spreadsheet_id = get_spreadsheet_id()
+        
+        # Process each sheet range
+        for range_name in SAMPLE_RANGE_NAMES:
+            extract_and_save(range_name, api_key, spreadsheet_id)
+        
+        logger.info("Google Sheets extraction completed successfully")
+    except Exception as err:
+        logger.error(f"Fatal error during execution: {str(err)}")
+        raise
+
+
+if __name__ == "__main__":
+    main()
