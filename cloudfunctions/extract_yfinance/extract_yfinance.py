@@ -1,116 +1,119 @@
-# Script to extract the historical prices from yfinance
+# Script to extract historical prices from yfinance
 
-# Import packages
+import logging
 import yfinance as yf
 import pandas as pd
-from dotenv import load_dotenv
+
+# Import shared utilities
+import sys
 from pathlib import Path
-import os
-import json
-from google.cloud import storage
-import tempfile
-from google.oauth2 import service_account
 
-# Get the path to the project root (2 levels up from current file)
-env_path = Path(__file__).resolve().parents[2] / ".env"
-load_dotenv(dotenv_path=env_path)
+# Add parent directory to path to import shared modules
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from shared import SecretManager, read_gcs_csv_to_df, upload_df_to_gcs
 
-# Access your env variables
-key_data = os.getenv("GCP_SERVICE_ACCOUNT_KEY")
-api_key = json.loads(key_data)
-storage_bucket = os.getenv("BUCKET_NAME")
-
-# Define scopes for GCP Service Account connections
-GCS_SCOPES = ["https://www.googleapis.com/auth/devstorage.read_write"]
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Portfolio Start Date
 PORTFOLIO_START_DATE = '2019-01-30'
 
-# Function to extract S&P data of interest
-def extract_yfinance(ticker='^GSPC', start_date=PORTFOLIO_START_DATE, end_date=None):
+
+def extract_yfinance_data(ticker='^GSPC', start_date=PORTFOLIO_START_DATE, end_date=None):
     """
-    Extracts historical prices of the of stocks/funds using the yfinance library.
+    Extracts historical prices of stocks/funds using the yfinance library.
 
     Args:
-        ticker (str): The ticker symbol of the stock to extract prices for. Defaults to '^GSPC' (S&P 500).
-        start_date (str): The start date of the price data to extract. Defaults to '2019-09-16'.
-        end_date (str or None): The end date of the price data to extract. Defaults to None.
+        ticker (str): The ticker symbol of the stock to extract prices for.
+                     Defaults to '^GSPC' (S&P 500).
+        start_date (str): The start date of the price data to extract.
+                         Defaults to PORTFOLIO_START_DATE.
+        end_date (str or None): The end date of the price data to extract.
+                               Defaults to None (current date).
 
     Returns:
-        pandas.DataFrame: A DataFrame containing the historical prices of a stock.
-
+        pd.DataFrame: A DataFrame containing the historical prices of a stock.
     """
-    # Start date for dataset
-    start_date = start_date
+    try:
+        logger.info(f"Downloading {ticker} data from {start_date} to {end_date}")
+        
+        # Download price data
+        data = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
-    # Get the current date as end date for dataset
-    end_date = end_date
+        # Flatten the multi-level columns if necessary
+        if isinstance(data.columns, pd.MultiIndex):
+            data = data.stack(level=1, future_stack=True).rename_axis(['Date', 'Ticker']).reset_index()
+        
+        # Remove column name
+        data.columns.name = None
+        
+        logger.info(f"Successfully downloaded {len(data)} rows for {ticker}")
+        return data
+    except Exception as e:
+        logger.error(f"Failed to download data for {ticker}: {str(e)}")
+        raise
 
-    # Get the S&P 500 data
-    data = yf.download(ticker, start=start_date, end=end_date)
 
-    # Flatten the multi-level columns
-    data = data.stack(level=1, future_stack=True).rename_axis(['Date', 'Ticker']).reset_index()
-    # Remove name from the columns
-    data.columns.name = None
+def main():
+    """Main execution function."""
+    try:
+        logger.info("Starting yfinance price extraction")
+        
+        # Read Transactions.csv from GCS
+        logger.info("Reading transactions from GCS")
+        transactions_df = read_gcs_csv_to_df('raw/raw_transactions.csv')
+        logger.info(f"Transactions DataFrame shape: {transactions_df.shape}")
 
-    # Return S&P 500 dataframe
-    return data
+        # Get DataFrame of unique symbols and min purchase_date
+        tickers = transactions_df.groupby('symbol')['purchase_date'].min().reset_index()
+        tickers['purchase_date'] = pd.to_datetime(tickers['purchase_date']).dt.strftime('%Y-%m-%d')
+        
+        logger.info(f"Extracted {len(tickers)} unique tickers from transactions")
 
-# Create credentials for Google Cloud Storage
-gcs_creds = service_account.Credentials.from_service_account_info(api_key, scopes=GCS_SCOPES)
-client = storage.Client(credentials=gcs_creds)
+        # Initiate empty list to collect all dataframes
+        all_dfs = []
 
-# Download Transactions.csv from GCS and read into DataFrame
-def read_gcs_csv_to_df(bucket_name, blob_name, client):
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
-        blob.download_to_filename(temp_file.name)
-        df = pd.read_csv(temp_file.name)
-        os.remove(temp_file.name)
-    return df
+        # Loop through list of tickers and extract historical data
+        for ticker in tickers['symbol']:
+            try:
+                # Extract purchase_date for ticker
+                purchase_date = tickers[tickers['symbol'] == ticker]['purchase_date'].values[0]
+                # Extract ticker data from purchase date
+                ticker_df = extract_yfinance_data(ticker=ticker, start_date=purchase_date)
+                all_dfs.append(ticker_df)
+                logger.info(f"Successfully processed {ticker}")
+            except Exception as e:
+                logger.error(f"Failed to process {ticker}: {str(e)}")
+                continue
 
-# Read Transactions.csv from GCS
-transactions_df = read_gcs_csv_to_df(storage_bucket, 'raw/Transactions.csv', client)
-print(f"Transactions DataFrame shape: {transactions_df.shape}")
+        # Append S&P 500 benchmark data
+        try:
+            logger.info("Downloading S&P 500 benchmark data")
+            sp500_df = extract_yfinance_data()
+            all_dfs.append(sp500_df)
+        except Exception as e:
+            logger.warning(f"Failed to download S&P 500 data: {str(e)}")
 
-# Get DataFrame of unique symbol and min purchase_date
-tickers = transactions_df.groupby('symbol')['purchase_date'].min().reset_index()
-# Change purchase_date to datetime
-tickers['purchase_date'] = pd.to_datetime(tickers['purchase_date']).dt.strftime('%Y-%m-%d')
+        # Filter empty dataframes and concatenate
+        historical_prices = [df for df in all_dfs if not df.empty]
+        if not historical_prices:
+            logger.error("No historical price data was collected")
+            raise ValueError("Failed to extract any historical price data")
+        
+        historical_prices_combined = pd.concat(historical_prices, axis=0)
+        logger.info(f"Combined historical prices DataFrame shape: {historical_prices_combined.shape}")
 
-# Initiate empty list all_dfs
-all_dfs = []
+        # Upload the combined DataFrame to GCS as CSV
+        gcs_path = upload_df_to_gcs(historical_prices_combined, 'raw/raw_prices.csv', file_format='csv')
+        logger.info(f"Successfully uploaded historical prices to {gcs_path}")
+        
+        logger.info("yfinance price extraction completed successfully")
 
-# Loop through list of tickers
-for ticker in tickers['symbol']:
-    # Extract purchase_date for ticker
-    purchase_date = tickers[tickers['symbol'] == ticker]['purchase_date'].values[0]
-    # Extract ticker data
-    ticker_df = extract_yfinance(ticker=ticker, start_date=purchase_date)
-    # Append dataframes
-    all_dfs.append(ticker_df)
+    except Exception as e:
+        logger.error(f"Fatal error during execution: {str(e)}")
+        raise
 
-# Append S&P 500 data
-all_dfs.append(extract_yfinance())
 
-# Filter empty dataframes
-historical_prices = [df for df in all_dfs if not df.empty]
-# Union all dataframes
-historical_prices = pd.concat(historical_prices, axis=0)
-print(f"Historical prices DataFrame shape: {historical_prices.shape}")
-
-# Save as CSV to a temp file and upload to GCS
-with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_csv:
-    historical_prices.to_csv(temp_csv.name, index=False)
-    temp_csv_path = temp_csv.name
-
-# Upload the CSV to GCS
-bucket = client.bucket(storage_bucket)
-blob = bucket.blob('raw/raw_prices.csv')
-blob.upload_from_filename(temp_csv_path)
-print(f"Historical prices CSV uploaded to gs://{storage_bucket}/raw/raw_prices.csv")
-
-# Remove the temp file after upload
-os.remove(temp_csv_path)
+if __name__ == "__main__":
+    main()
