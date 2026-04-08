@@ -1,65 +1,49 @@
-# Extract raw cash data for cleaning and storage in GCS
+# Transform raw cash data for cleaning and storage in GCS
 
-# Imports
-from google.oauth2 import service_account
-from google.cloud import secretmanager
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+import logging
 import pandas as pd
-from dotenv import load_dotenv
+
+# Import shared utilities
+import sys
 from pathlib import Path
-import os
-import json
-from google.cloud import storage
-import tempfile
 
-# Project ID
-PROJECT_ID = "holdings-extract"
+# Add parent directory to path to import shared modules
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from shared import read_gcs_csv_to_df, upload_df_to_gcs
 
-# Function to extract secret from GCP Secret Manager
-def access_secret_version(secret_id, version_id="latest"):
-    """
-    Access the payload for the given secret version if one exists.
-    """
-    client = secretmanager.SecretManagerServiceClient()
-    name = f"projects/{PROJECT_ID}/secrets/{secret_id}/versions/{version_id}"
-    response = client.access_secret_version(request={"name": name})
-    payload = response.payload.data.decode("UTF-8")
-    return payload
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Get secrets
-GCP_SERVICE_ACCOUNT_KEY = access_secret_version('GCP_SERVICE_ACCOUNT_KEY')
-STORAGE_BUCKET = access_secret_version('BUCKET_NAME')
 
-# Define scopes for GCP Service Account connections
-GCS_SCOPES = ["https://www.googleapis.com/auth/devstorage.read_write"]
+def main():
+    """Main execution function to extract, transform, and load cash data."""
+    try:
+        logger.info("Starting cash data transformation")
+        
+        # Extract raw cash CSV from GCS
+        logger.info("Reading raw cash data from GCS")
+        raw_cash_df = read_gcs_csv_to_df('raw/raw_cash.csv')
+        logger.info(f"Raw cash data extracted successfully")
+        logger.info(f"Shape: {raw_cash_df.shape}")
+        logger.info(f"\nFirst few rows:\n{raw_cash_df.head()}\n")
 
-# Extract raw cash csv in bucket
-storage_client = storage.Client.from_service_account_info(json.loads(GCP_SERVICE_ACCOUNT_KEY))
-bucket = storage_client.bucket(STORAGE_BUCKET)
-blob = bucket.blob('raw/raw_cash.csv')
-with tempfile.NamedTemporaryFile() as temp_file:
-    blob.download_to_filename(temp_file.name)
-    raw_cash_df = pd.read_csv(temp_file.name)
+        # Transform: Clean raw cash data
+        logger.info("Cleaning data - converting date column to datetime")
+        raw_cash_df['date'] = pd.to_datetime(raw_cash_df['date'])
+        logger.info(f"Data types after cleaning:\n{raw_cash_df.dtypes}\n")
 
-print(f'\nRaw cash data extracted successfully {raw_cash_df.head()}\n')
-print(f'\nShape {raw_cash_df.shape}\n')
+        # Load: Upload cleaned data as Parquet to GCS
+        logger.info("Uploading cleaned cash data to GCS as Parquet")
+        gcs_path = upload_df_to_gcs(raw_cash_df, 'warehouse/clean_cash.parquet', file_format='parquet')
+        logger.info(f"Parquet file uploaded to {gcs_path}")
+        
+        logger.info("Cash data transformation completed successfully")
 
-# Clean raw cash data
-print('Changing date column data type')
-raw_cash_df['date'] = pd.to_datetime(raw_cash_df['date'])
-print(f'\nData types after cleaning:\n{raw_cash_df.dtypes}\n')
+    except Exception as e:
+        logger.error(f"Fatal error during execution: {str(e)}")
+        raise
 
-# Create parquet file of data
-with tempfile.NamedTemporaryFile(suffix='.parquet', delete=False) as temp_file:
-    raw_cash_df.to_parquet(temp_file.name, index=False)
-    parquet_file_path = temp_file.name
 
-# Upload parquet to GCS
-blob = bucket.blob('warehouse/clean_cash.parquet')
-blob.upload_from_filename(parquet_file_path)
-print(f'\nParquet file uploaded to gs://{STORAGE_BUCKET}/warehouse/clean_cash.parquet\n')
-
-# Clean up temp file
-os.remove(parquet_file_path)
-print(f'\nTemporary file removed: {parquet_file_path}\n')
+if __name__ == "__main__":
+    main()
