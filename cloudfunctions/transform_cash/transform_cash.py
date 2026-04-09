@@ -35,7 +35,7 @@ def main():
 
         # Load: Upload cleaned data as Parquet to GCS
         logger.info("Uploading cleaned cash data to GCS as Parquet")
-        gcs_path = upload_df_to_gcs(raw_cash_df, 'warehouse/clean_cash.parquet', file_format='parquet')
+        gcs_path = upload_df_to_gcs(raw_cash_df, 'clean/clean_cash.parquet', file_format='parquet')
         logger.info(f"Parquet file uploaded to {gcs_path}")
         
         logger.info("Cash data transformation completed successfully")
