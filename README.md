@@ -65,6 +65,20 @@ gcloud auth application-default login
 ```
 8. 
 
+### Data Storage Layers
+* Google Cloud Storage
+  - Raw storage of CSV files from initial data source extraction
+    1. raw_cash.csv
+    2. raw_prices.csv
+    3. raw_transactions.csv
+  - Clean storage of original raw files, saved as parquets to keep typing
+    1. clean_cash.parquet
+    2. clean_prices.parquet
+    3. clean_transactions.parquet
+* BigQuery
+  - Staging dataset
+  - Analytics dataset in desired data model with dimension and facts tables
+
 ### Portfolio Metrics View
 After the database has been set up and the pipeline has been run, a view can be created using the 
 `portfolio_view.sql` script for calculating portfolio metrics for returns and comparison versus 
