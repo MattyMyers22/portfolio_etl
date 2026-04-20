@@ -37,7 +37,7 @@ DATASET_ID = "portfolio_staging"
 # Define explicit BigQuery schemas for all tables
 # Using NUMERIC(12,4) for financial data to preserve precision
 SCHEMAS = {
-    "transactions": [
+    "stg_transactions": [
         bigquery.SchemaField("transaction_type", "STRING", mode="NULLABLE"),
         bigquery.SchemaField("account", "STRING", mode="NULLABLE"),
         bigquery.SchemaField("symbol", "STRING", mode="NULLABLE"),
@@ -47,12 +47,12 @@ SCHEMAS = {
         bigquery.SchemaField("sell_date", "TIMESTAMP", mode="NULLABLE"),
         bigquery.SchemaField("sell_price", "NUMERIC", mode="NULLABLE"),
     ],
-    "cash": [
+    "stg_cash": [
         bigquery.SchemaField("date", "TIMESTAMP", mode="NULLABLE"),
         bigquery.SchemaField("account", "STRING", mode="NULLABLE"),
         bigquery.SchemaField("cash_amount", "NUMERIC", mode="NULLABLE"),
     ],
-    "prices": [
+    "stg_prices": [
         bigquery.SchemaField("date", "TIMESTAMP", mode="NULLABLE"),
         bigquery.SchemaField("open", "NUMERIC", mode="NULLABLE"),
         bigquery.SchemaField("high", "NUMERIC", mode="NULLABLE"),
