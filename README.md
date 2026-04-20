@@ -63,7 +63,13 @@ To test and run locally, you'll also need the Google Cloud SDK and CLI installed
 ```Bash
 gcloud auth application-default login
 ```
-8. 
+### Big Query
+New datasets in BigQuery can be created through the Cloud BigQuery console or by executing the following in the Cloud Shell CLI.
+
+```Bash
+bq mk --dataset portfolio_staging
+bq mk --dataset portfolio_analytics
+```
 
 ### Data Storage Layers
 * Google Cloud Storage
