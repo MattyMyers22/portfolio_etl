@@ -35,32 +35,31 @@ PROJECT_ID = "holdings-extract"
 DATASET_ID = "portfolio_staging"
 
 # Define explicit BigQuery schemas for all tables
-# Using NUMERIC(12,4) for financial data to preserve precision
+# Using FLOAT64 for numeric columns (pandas float64 maps cleanly to BigQuery FLOAT64)
 SCHEMAS = {
     "stg_transactions": [
         bigquery.SchemaField("transaction_type", "STRING", mode="NULLABLE"),
         bigquery.SchemaField("account", "STRING", mode="NULLABLE"),
         bigquery.SchemaField("symbol", "STRING", mode="NULLABLE"),
         bigquery.SchemaField("purchase_date", "TIMESTAMP", mode="NULLABLE"),
-        bigquery.SchemaField("shares", "NUMERIC", mode="NULLABLE"),
-        bigquery.SchemaField("purchase_price", "NUMERIC", mode="NULLABLE"),
+        bigquery.SchemaField("shares", "FLOAT64", mode="NULLABLE"),
+        bigquery.SchemaField("purchase_price", "FLOAT64", mode="NULLABLE"),
         bigquery.SchemaField("sell_date", "TIMESTAMP", mode="NULLABLE"),
-        bigquery.SchemaField("sell_price", "NUMERIC", mode="NULLABLE"),
+        bigquery.SchemaField("sell_price", "FLOAT64", mode="NULLABLE"),
     ],
     "stg_cash": [
         bigquery.SchemaField("date", "TIMESTAMP", mode="NULLABLE"),
         bigquery.SchemaField("account", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("cash_amount", "NUMERIC", mode="NULLABLE"),
+        bigquery.SchemaField("cash_amount", "FLOAT64", mode="NULLABLE"),
     ],
     "stg_prices": [
         bigquery.SchemaField("date", "TIMESTAMP", mode="NULLABLE"),
-        bigquery.SchemaField("open", "NUMERIC", mode="NULLABLE"),
-        bigquery.SchemaField("high", "NUMERIC", mode="NULLABLE"),
-        bigquery.SchemaField("low", "NUMERIC", mode="NULLABLE"),
-        bigquery.SchemaField("close", "NUMERIC", mode="NULLABLE"),
-        bigquery.SchemaField("adj_close", "NUMERIC", mode="NULLABLE"),
+        bigquery.SchemaField("Ticker", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("close", "FLOAT64", mode="NULLABLE"),
+        bigquery.SchemaField("high", "FLOAT64", mode="NULLABLE"),
+        bigquery.SchemaField("low", "FLOAT64", mode="NULLABLE"),
+        bigquery.SchemaField("open", "FLOAT64", mode="NULLABLE"),
         bigquery.SchemaField("volume", "INT64", mode="NULLABLE"),
-        bigquery.SchemaField("symbol", "STRING", mode="NULLABLE"),
     ]
 }
 
@@ -125,28 +124,16 @@ def load_table_to_bq(
         logger.info(f"Reading parquet from GCS: {gcs_parquet_path}")
         df = read_gcs_parquet_to_df(gcs_parquet_path)
         logger.info(f"Read {len(df)} rows from {gcs_parquet_path}")
+        logger.info(f"DataFrame columns: {list(df.columns)}, dtypes: {dict(df.dtypes)}")
         
-        # Convert timestamp columns from pandas datetime to BigQuery-compatible format
-        # BigQuery TIMESTAMP expects ISO 8601 format
-        for col in df.columns:
-            if pd.api.types.is_datetime64_any_dtype(df[col]):
-                logger.info(f"Converting {col} to ISO 8601 format")
-                df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S.%f').str[:-3]
-        
-        # Convert numeric columns to strings for NUMERIC type
-        # BigQuery NUMERIC needs proper string representation for precision
-        for col in df.columns:
-            if pd.api.types.is_float_dtype(df[col]) or pd.api.types.is_integer_dtype(df[col]):
-                if col != 'volume':  # Keep volume as INT64
-                    logger.info(f"Converting {col} to string for NUMERIC type")
-                    df[col] = df[col].astype(str)
+        # BigQuery load_table_from_dataframe handles type conversion using the provided schema
+        # No need to manually convert timestamps or numerics
         
         # Configure load job
         table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
         job_config = bigquery.LoadJobConfig(
             schema=schema,
-            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
-            skip_leading_rows=0
+            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
         )
         
         # Load data to BigQuery
@@ -183,7 +170,7 @@ def main():
     
     Reads clean parquet files from GCS and loads into BigQuery with explicit
     schema definitions. Uses ThreadPoolExecutor for parallel loading across
-    the three tables (transactions, cash, prices).
+    the three tables (stg_transactions, stg_cash, stg_prices).
     """
     try:
         logger.info("=" * 80)
