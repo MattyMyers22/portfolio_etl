@@ -45,12 +45,12 @@ SCHEMAS = {
         bigquery.SchemaField("shares", "FLOAT64", mode="NULLABLE"),
         bigquery.SchemaField("purchase_price", "FLOAT64", mode="NULLABLE"),
         bigquery.SchemaField("sell_date", "TIMESTAMP", mode="NULLABLE"),
-        bigquery.SchemaField("sell_price", "FLOAT64", mode="NULLABLE"),
+        bigquery.SchemaField("sell_price", "FLOAT64", mode="NULLABLE")
     ],
     "stg_cash": [
         bigquery.SchemaField("date", "TIMESTAMP", mode="NULLABLE"),
         bigquery.SchemaField("account", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("cash_amount", "FLOAT64", mode="NULLABLE"),
+        bigquery.SchemaField("cash_amount", "FLOAT64", mode="NULLABLE")
     ],
     "stg_prices": [
         bigquery.SchemaField("date", "TIMESTAMP", mode="NULLABLE"),
@@ -59,7 +59,7 @@ SCHEMAS = {
         bigquery.SchemaField("high", "FLOAT64", mode="NULLABLE"),
         bigquery.SchemaField("low", "FLOAT64", mode="NULLABLE"),
         bigquery.SchemaField("open", "FLOAT64", mode="NULLABLE"),
-        bigquery.SchemaField("volume", "INT64", mode="NULLABLE"),
+        bigquery.SchemaField("volume", "INT64", mode="NULLABLE")
     ]
 }
 
