@@ -69,7 +69,7 @@ SELECT
     THEN ROUND((h.current_shares * lp.current_price - cb.total_cost_basis) / cb.total_cost_basis * 100, 2)
     ELSE NULL 
   END AS unrealized_pl_pct,
-  ROUND(DATE_DIFF(CURRENT_DATE(), h.first_purchase_date, DAY) / 365.25, 2) AS years_held,
+  ROUND(DATE_DIFF(CURRENT_DATE(), EXTRACT(DATE FROM h.first_purchase_date), DAY) / 365.25, 2) AS years_held,
   lc.cash_amount AS account_cash,
   sb.sp500_price,
   ROUND(sb.sp500_price * h.current_shares * COALESCE((SELECT AVG(purchase_price) FROM `portfolio_analytics.fact_transactions` WHERE symbol = '^GSPC'), 1), 2) AS sp500_value_equivalent,
