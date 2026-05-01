@@ -1,9 +1,10 @@
--- Holdings Summary View
+-- Holdings Summary Table
 -- Simplified aggregate of current holdings by symbol and account
 -- Shows holdings with cost basis, current value, and unrealized gains
 -- Grain: One row per symbol per account (current holdings only)
+-- Refreshed on each data load via orchestrator procedure
 
-CREATE OR REPLACE VIEW `portfolio_analytics.holdings_summary` AS
+CREATE OR REPLACE TABLE `portfolio_analytics.holdings_summary` AS
 WITH current_holdings AS (
   -- Aggregate current shares for each symbol/account (buys - sells)
   SELECT

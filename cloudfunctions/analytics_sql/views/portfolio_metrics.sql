@@ -1,9 +1,10 @@
--- Portfolio Metrics View
+-- Portfolio Metrics Table
 -- Real-time portfolio snapshot with holdings, performance, and allocation
 -- Shows current holdings with unrealized gains, cash, total portfolio value, and S&P 500 comparison
 -- Grain: One row per security per account (current holdings only)
+-- Refreshed on each data load via orchestrator procedure
 
-CREATE OR REPLACE VIEW `portfolio_analytics.portfolio_metrics` AS
+CREATE OR REPLACE TABLE `portfolio_analytics.portfolio_metrics` AS
 WITH current_holdings AS (
   -- Aggregate current shares for each symbol/account (buys - sells)
   SELECT

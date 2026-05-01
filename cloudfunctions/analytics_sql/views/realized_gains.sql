@@ -1,9 +1,10 @@
--- Realized Gains View
+-- Realized Gains Table
 -- Shows closed positions with realized gains/losses and holding periods
 -- Used for tax planning and performance analysis on sold positions
 -- Grain: One row per closed position (sell transaction)
+-- Refreshed on each data load via orchestrator procedure
 
-CREATE OR REPLACE VIEW `portfolio_analytics.realized_gains` AS
+CREATE OR REPLACE TABLE `portfolio_analytics.realized_gains` AS
 SELECT
   symbol,
   account,

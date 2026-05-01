@@ -1,9 +1,10 @@
--- Cash Summary View
+-- Cash Summary Table
 -- Shows cash position per account and its proportion of total portfolio
 -- Integrates cash with securities holdings to calculate allocation percentage
 -- Grain: One row per account
+-- Refreshed on each data load via orchestrator procedure
 
-CREATE OR REPLACE VIEW `portfolio_analytics.cash_summary` AS
+CREATE OR REPLACE TABLE `portfolio_analytics.cash_summary` AS
 WITH latest_cash AS (
   -- Get most recent cash balance per account
   SELECT
