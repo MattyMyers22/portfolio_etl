@@ -27,6 +27,11 @@ WITH
           END)
         - SUM(CASE WHEN transaction_type = 'sell' THEN shares ELSE 0 END)
         AS current_shares,
+      /*
+      This may be calculated in correctly as it takes the average purchase price of all buys and reinvestments,
+      not just the shares currently held. May need to group by purchase date as well. Then take the cost basis of all shares currently held,
+      divided by the number of shares currently held.
+      */
       AVG(
         CASE
           WHEN transaction_type IN ('buy', 'reinvestment') THEN purchase_price
