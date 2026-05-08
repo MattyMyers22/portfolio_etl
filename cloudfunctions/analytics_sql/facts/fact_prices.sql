@@ -57,7 +57,6 @@ SELECT
     THEN ROUND((close_price - COALESCE(previous_close, close_price)) / COALESCE(previous_close, close_price) * 100, 2)
     ELSE NULL
   END AS price_change_from_previous_pct,
-  volume > 0 AS is_trading_day,
   load_timestamp
 FROM price_enrichment
 WHERE symbol IS NOT NULL
