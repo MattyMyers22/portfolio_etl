@@ -1,174 +1,146 @@
--- Holdings Summary Table
--- Simplified aggregate of current holdings by symbol and account
--- Grain: One row per symbol per account (current holdings only)
+-- Holdings Summary Materialized Table
+-- Current holdings with purchase lots tracked separately, aggregated by account and symbol
+-- Plus cash values by account shown as separate rows
+-- Includes percentage of total account value (holdings + cash) for each row
 
-CREATE OR REPLACE TABLE `portfolio_analytics.holdings_summary`
-AS
+CREATE OR REPLACE TABLE `portfolio_analytics.holdings_summary` AS
 WITH
-  current_holdings AS (
+  purchase_lots AS (
+    -- Calculate remaining shares for each purchase lot (buys minus sells for that specific lot)
     SELECT
-      symbol,
       account,
+      symbol,
+      purchase_date,
+      purchase_price,
       SUM(
         CASE
           WHEN transaction_type IN ('buy', 'reinvestment') THEN shares
-          ELSE 0
+          ELSE -COALESCE(shares, 0)
           END)
-        - SUM(CASE WHEN transaction_type = 'sell' THEN shares ELSE 0 END)
-        AS current_shares,
-      COUNT(
-        DISTINCT
-          CASE
-            WHEN transaction_type IN ('buy', 'reinvestment') THEN purchase_date
-            END)
-        AS num_purchase_lots,
-      AVG(
-        CASE
-          WHEN transaction_type IN ('buy', 'reinvestment') THEN purchase_price
-          ELSE NULL
-          END)
-        AS avg_buy_price,
-      MIN(purchase_date) AS first_purchase_date,
-      MAX(COALESCE(sell_date, purchase_date)) AS last_transaction_date
+        AS remaining_shares
     FROM `portfolio_analytics.fact_transactions`
-    GROUP BY symbol, account
-    HAVING current_shares > 0
+    GROUP BY account, symbol, purchase_date, purchase_price
+    HAVING remaining_shares > 0
   ),
   latest_prices AS (
-    SELECT Ticker AS symbol, close AS current_price
-    FROM
-      (
-        SELECT
-          Ticker,
-          close,
-          ROW_NUMBER() OVER (PARTITION BY Ticker ORDER BY date DESC) AS rn
-        FROM `portfolio_staging.stg_prices`
-      )
-    WHERE rn = 1
-  ),
-  latest_cash AS (
-    SELECT account, cash_amount
-    FROM
-      (
-        SELECT
-          account,
-          cash_amount,
-          ROW_NUMBER() OVER (PARTITION BY account ORDER BY date DESC) AS rn
-        FROM `portfolio_analytics.fact_cash`
-      )
-    WHERE rn = 1
-  ),
-  account_totals AS (
-    SELECT
-      ch.account,
-      SUM(ch.current_shares * lp.current_price)
-        + COALESCE(MAX(lc.cash_amount), 0)
-        AS account_total_value
-    FROM current_holdings ch
-    JOIN latest_prices lp
-      ON ch.symbol = lp.symbol
-    LEFT JOIN latest_cash lc
-      ON ch.account = lc.account
-    GROUP BY ch.account
-  ),
-  sp500_current AS (
-    SELECT close AS sp500_price
-    FROM `portfolio_staging.stg_prices`
-    WHERE Ticker = '^GSPC'
-    ORDER BY date DESC
-    LIMIT 1
-  ),
-  sp500_history AS (
-    SELECT date, close AS sp500_price
-    FROM `portfolio_staging.stg_prices`
-    WHERE Ticker = '^GSPC'
-  ),
-  sp500_on_purchase AS (
-    SELECT
-      ch.symbol,
-      ch.account,
-      LAST_VALUE(sh.sp500_price IGNORE NULLS)
-        OVER (
-          PARTITION BY ch.symbol, ch.account
-          ORDER BY sh.date
-          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-        )
-        AS sp500_purchase_price
-    FROM current_holdings ch
-    LEFT JOIN sp500_history sh
-      ON sh.date <= ch.first_purchase_date
-  ),
-  sp500_on_purchase_dedup AS (
-    SELECT symbol, account, MAX(sp500_purchase_price) AS sp500_purchase_price
-    FROM sp500_on_purchase
-    GROUP BY 1, 2
-  ),
-  cost_basis AS (
+    -- Get the most recent price for each symbol
     SELECT
       symbol,
+      close_price,
+      ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY price_date DESC) AS rn
+    FROM `portfolio_analytics.fact_prices`
+  ),
+  lot_valuations AS (
+    -- Value each lot at current price
+    SELECT
+      pl.account,
+      pl.symbol,
+      pl.purchase_date,
+      pl.purchase_price,
+      pl.remaining_shares,
+      ROUND(pl.remaining_shares * pl.purchase_price, 2) AS lot_cost_basis,
+      ROUND(lp.close_price, 2) AS current_price,
+      ROUND(pl.remaining_shares * lp.close_price, 2) AS lot_current_value
+    FROM purchase_lots pl
+    LEFT JOIN latest_prices lp
+      ON pl.symbol = lp.symbol AND lp.rn = 1
+  ),
+  symbol_aggregates AS (
+    -- Aggregate lots up to symbol level per account
+    SELECT
       account,
-      SUM(
-        CASE
-          WHEN transaction_type IN ('buy', 'reinvestment')
-            THEN shares * purchase_price
-          ELSE 0
-          END)
-        AS total_cost_basis
-    FROM `portfolio_analytics.fact_transactions`
-    GROUP BY symbol, account
+      symbol,
+      ROUND(SUM(remaining_shares), 2) AS total_shares,
+      ROUND(SUM(lot_cost_basis), 2) AS total_cost_basis,
+      ROUND(SUM(lot_current_value), 2) AS total_current_value,
+      ROUND(SUM(lot_current_value) - SUM(lot_cost_basis), 2) AS unrealized_pl,
+      CASE
+        WHEN SUM(lot_cost_basis) > 0
+          THEN
+            ROUND(
+              (SUM(lot_current_value) - SUM(lot_cost_basis))
+                / SUM(lot_cost_basis)
+                * 100,
+              2)
+        ELSE NULL
+        END
+        AS unrealized_pl_pct
+    FROM lot_valuations
+    GROUP BY account, symbol
+  ),
+  latest_cash AS (
+    -- Get most recent cash per account
+    SELECT
+      account,
+      cash_amount,
+      ROW_NUMBER() OVER (PARTITION BY account ORDER BY date DESC) AS rn
+    FROM `portfolio_analytics.fact_cash`
+  ),
+  holdings_summary AS (
+    -- Format holdings for final output
+    SELECT
+      account,
+      symbol,
+      total_shares,
+      ROUND(total_cost_basis / NULLIF(total_shares, 0), 2)
+        AS avg_cost_per_share,
+      total_cost_basis,
+      ROUND(total_current_value / NULLIF(total_shares, 0), 2) AS current_price,
+      total_current_value,
+      unrealized_pl,
+      unrealized_pl_pct
+    FROM symbol_aggregates
+  ),
+  account_summary AS (
+    -- Sum all holdings per account
+    SELECT account, ROUND(SUM(total_current_value), 2) AS total_holdings_value
+    FROM holdings_summary
+    GROUP BY account
+  ),
+  account_with_cash AS (
+    -- Join holdings totals with latest cash
+    SELECT
+      ats.account,
+      ats.total_holdings_value,
+      COALESCE(lc.cash_amount, 0) AS cash_value,
+      ROUND(ats.total_holdings_value + COALESCE(lc.cash_amount, 0), 2)
+        AS account_total_value
+    FROM account_summary ats
+    LEFT JOIN (SELECT account, cash_amount FROM latest_cash WHERE rn = 1) lc
+      ON ats.account = lc.account
   )
+-- Holdings with percentage of account
 SELECT
-  h.symbol,
-  h.account,
-  h.current_shares,
-  ROUND(cb.total_cost_basis, 2) AS cost_basis,
-  ROUND(h.current_shares * lp.current_price, 2) AS current_value,
-  ROUND(h.current_shares * lp.current_price - cb.total_cost_basis, 2)
-    AS unrealized_pl,
-  CASE
-    WHEN cb.total_cost_basis > 0
-      THEN
-        ROUND(
-          (h.current_shares * lp.current_price - cb.total_cost_basis)
-            / cb.total_cost_basis
-            * 100,
-          2)
-    ELSE NULL
-    END
-    AS unrealized_pl_pct,
-  h.num_purchase_lots,
-  h.first_purchase_date,
-  h.last_transaction_date,
-  CASE
-    WHEN act.account_total_value > 0
-      THEN
-        ROUND(
-          h.current_shares * lp.current_price / act.account_total_value * 100,
-          2)
-    ELSE 0
-    END
-    AS position_pct_of_account,
-  CASE
-    WHEN spp.sp500_purchase_price > 0 AND sc.sp500_price > 0
-      THEN
-        ROUND(
-          ((lp.current_price - h.avg_buy_price) / h.avg_buy_price * 100)
-            - (
-              (sc.sp500_price - spp.sp500_purchase_price)
-              / spp.sp500_purchase_price
-              * 100),
-          2)
-    ELSE NULL
-    END
-    AS vs_sp500_pl_pct
-FROM current_holdings h
-JOIN cost_basis cb
-  ON h.symbol = cb.symbol AND h.account = cb.account
-JOIN latest_prices lp
-  ON h.symbol = lp.symbol
-JOIN account_totals act
-  ON h.account = act.account
-CROSS JOIN sp500_current sc
-LEFT JOIN sp500_on_purchase_dedup spp
-  ON h.symbol = spp.symbol AND h.account = spp.account
-ORDER BY h.account, h.symbol;
+  hs.account,
+  hs.symbol,
+  hs.total_shares,
+  hs.avg_cost_per_share,
+  hs.total_cost_basis,
+  hs.current_price,
+  hs.total_current_value,
+  hs.unrealized_pl,
+  hs.unrealized_pl_pct,
+  ROUND(hs.total_current_value / NULLIF(awc.account_total_value, 0) * 100, 2)
+    AS pct_of_account,
+  CURRENT_DATE() AS valuation_date
+FROM holdings_summary hs
+LEFT JOIN account_with_cash awc
+  ON hs.account = awc.account
+UNION ALL
+
+-- Cash values as separate rows
+SELECT
+  awc.account,
+  'Cash Holdings' AS symbol,
+  NULL AS total_shares,
+  NULL AS avg_cost_per_share,
+  NULL AS total_cost_basis,
+  NULL AS current_price,
+  awc.cash_value AS total_current_value,
+  NULL AS unrealized_pl,
+  NULL AS unrealized_pl_pct,
+  ROUND(awc.cash_value / NULLIF(awc.account_total_value, 0) * 100, 2)
+    AS pct_of_account,
+  CURRENT_DATE() AS valuation_date
+FROM account_with_cash awc
+ORDER BY account, CASE WHEN symbol = 'Cash Holdings' THEN 1 ELSE 0 END, symbol;
