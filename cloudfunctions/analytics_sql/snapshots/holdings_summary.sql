@@ -3,7 +3,8 @@
 -- Plus cash values by account shown as separate rows
 -- Includes percentage of total account value (holdings + cash) for each row
 
-CREATE OR REPLACE TABLE `portfolio_analytics.holdings_summary` AS
+CREATE OR REPLACE TABLE `portfolio_analytics.holdings_summary`
+AS
 WITH
   purchase_lots AS (
     -- Calculate remaining shares for each purchase lot (buys minus sells for that specific lot)
@@ -34,12 +35,14 @@ WITH
     -- Get S&P 500 prices: current and at each purchase date
     SELECT
       'sp500_current' AS benchmark_type,
-      CAST(NULL AS DATE) AS purchase_date,
+      CAST(NULL AS TIMESTAMP) AS purchase_date,
       fp_current.close_price AS sp500_price
     FROM `portfolio_analytics.fact_prices` fp_current
-    WHERE fp_current.symbol = '^GSPC'
+    WHERE
+      fp_current.symbol = '^GSPC'
       AND fp_current.price_date = (
-        SELECT MAX(price_date) FROM `portfolio_analytics.fact_prices` 
+        SELECT MAX(price_date)
+        FROM `portfolio_analytics.fact_prices`
         WHERE symbol = '^GSPC'
       )
     UNION ALL
@@ -50,8 +53,8 @@ WITH
       fp_hist.close_price AS sp500_price
     FROM purchase_lots pl
     LEFT JOIN `portfolio_analytics.fact_prices` fp_hist
-      ON fp_hist.symbol = '^GSPC'
-      AND fp_hist.price_date = pl.purchase_date
+      ON
+        fp_hist.symbol = '^GSPC' AND fp_hist.price_date = DATE(pl.purchase_date)
   ),
   lot_valuations AS (
     -- Value each lot at current price and calculate benchmark comparison
@@ -70,30 +73,40 @@ WITH
       -- Calculate returns
       CASE
         WHEN pl.purchase_price > 0
-          THEN ROUND((lp.close_price - pl.purchase_price) / pl.purchase_price * 100, 2)
+          THEN
+            ROUND(
+              (lp.close_price - pl.purchase_price) / pl.purchase_price * 100, 2)
         ELSE NULL
-      END AS portfolio_return_pct,
+        END
+        AS portfolio_return_pct,
       CASE
         WHEN sp500_purch.sp500_price > 0
-          THEN ROUND(
-            (sp500_curr.sp500_price - sp500_purch.sp500_price) / sp500_purch.sp500_price * 100, 2)
+          THEN
+            ROUND(
+              (sp500_curr.sp500_price - sp500_purch.sp500_price)
+                / sp500_purch.sp500_price
+                * 100,
+              2)
         ELSE NULL
-      END AS sp500_return_pct
+        END
+        AS sp500_return_pct
     FROM purchase_lots pl
     LEFT JOIN latest_prices lp
       ON pl.symbol = lp.symbol AND lp.rn = 1
-    LEFT JOIN (
-      SELECT purchase_date, sp500_price 
-      FROM sp500_benchmark 
-      WHERE benchmark_type = 'sp500_at_purchase'
-    ) sp500_purch
+    LEFT JOIN
+      (
+        SELECT purchase_date, sp500_price
+        FROM sp500_benchmark
+        WHERE benchmark_type = 'sp500_at_purchase'
+      ) sp500_purch
       ON pl.purchase_date = sp500_purch.purchase_date
-    LEFT JOIN (
-      SELECT sp500_price 
-      FROM sp500_benchmark 
-      WHERE benchmark_type = 'sp500_current'
-    ) sp500_curr
-      ON 1=1
+    LEFT JOIN
+      (
+        SELECT sp500_price
+        FROM sp500_benchmark
+        WHERE benchmark_type = 'sp500_current'
+      ) sp500_curr
+      ON 1 = 1
   ),
   symbol_aggregates AS (
     -- Aggregate lots up to symbol level per account
@@ -118,12 +131,14 @@ WITH
       -- S&P 500 Comparison: weighted average outperformance
       CASE
         WHEN SUM(lot_cost_basis) > 0
-          THEN ROUND(
-            SUM(portfolio_return_pct * lot_cost_basis) / SUM(lot_cost_basis) 
-            - SUM(sp500_return_pct * lot_cost_basis) / SUM(lot_cost_basis),
-            2)
+          THEN
+            ROUND(
+              SUM(portfolio_return_pct * lot_cost_basis) / SUM(lot_cost_basis)
+                - SUM(sp500_return_pct * lot_cost_basis) / SUM(lot_cost_basis),
+              2)
         ELSE NULL
-      END AS sp500_comparison_pct
+        END
+        AS sp500_comparison_pct
     FROM lot_valuations
     GROUP BY account, symbol
   ),
